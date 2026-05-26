@@ -1,43 +1,3 @@
-// Base de datos simulada de usuarios
-const usersDatabase = {
-    '1': {
-        id: '1',
-        nombre: 'Julian Sterling',
-        cargo: 'Administrador',
-        curp: 'STJU850315HDFLRN09',
-        telefono: '5551234567',
-        email: 'j.sterling@livingarchive.org',
-        activo: true
-    },
-    '2': {
-        id: '2',
-        nombre: 'Elena Aris',
-        cargo: 'Inspector',
-        curp: 'AREL900520MDFRLN03',
-        telefono: '5552345678',
-        email: 'e.aris@livingarchive.org',
-        activo: true
-    },
-    '3': {
-        id: '3',
-        nombre: 'Marcus Halloway',
-        cargo: 'Analyst',
-        curp: 'HALM880712HDFLRC05',
-        telefono: '5553456789',
-        email: 'm.halloway@livingarchive.org',
-        activo: false
-    },
-    '4': {
-        id: '4',
-        nombre: 'Sarah Kincaid',
-        cargo: 'Analyst',
-        curp: 'KINS920425MDFLRH08',
-        telefono: '5554567890',
-        email: 's.kincaid@livingarchive.org',
-        activo: true
-    }
-};
-
 // Variables globales para control de modales
 let currentEditingUserId = null;
 let currentAction = null;
@@ -68,7 +28,6 @@ function saveAddUser() {
     const nombre = document.getElementById('addNombreCompleto').value.trim();
     const cargo = document.getElementById('addCargo').value;
     const curp = document.getElementById('addCurp').value.trim().toUpperCase();
-    const telefono = document.getElementById('addTelefono').value.trim();
     const email = document.getElementById('addEmail').value.trim();
     const password = document.getElementById('addPassword').value;
     const passwordConfirm = document.getElementById('addPasswordConfirm').value;
@@ -77,13 +36,6 @@ function saveAddUser() {
     const curpPattern = /^[A-Z]{4}[0-9]{6}[HM][A-Z]{5}[0-9]{2}$/;
     if (!curpPattern.test(curp)) {
         alert('El CURP no tiene un formato válido. Debe tener 18 caracteres: 4 letras, 6 números, H o M, 5 letras y 2 números.');
-        return;
-    }
-
-    // Validar teléfono
-    const telefonoPattern = /^[0-9]{10}$/;
-    if (!telefonoPattern.test(telefono)) {
-        alert('El teléfono debe contener exactamente 10 dígitos numéricos.');
         return;
     }
 
@@ -98,44 +50,65 @@ function saveAddUser() {
         return;
     }
 
-    // Validar email único
-    for (let userId in usersDatabase) {
-        if (usersDatabase[userId].email.toLowerCase() === email.toLowerCase()) {
-            alert('El correo electrónico ya está registrado en el sistema.');
-            return;
+    // Crear FormData con los datos
+    const formData = new FormData();
+    formData.append(CSRF_TOKEN_NAME, CSRF_HASH);
+    formData.append('nombre', nombre);
+    formData.append('adm', cargo);
+    formData.append('expediente', curp);
+    formData.append('email', email);
+    formData.append('password', password);
+    formData.append('password_confirm', passwordConfirm);
+
+    // Enviar al servidor
+    fetch(BASE_URL + 'admin/crearUsuario', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert(`Usuario creado exitosamente!\n\nNombre: ${nombre}\nCargo: ${cargo === '1' ? 'Administrador' : 'Inspector'}\nCorreo: ${email}\n\nSe ha enviado un correo de confirmación al usuario.`);
+            closeAddUserModal();
+            location.reload(); // Recargar página para mostrar el nuevo usuario
+        } else {
+            alert('Error al crear usuario: ' + (data.error || 'Error desconocido'));
         }
-    }
-
-    // Simular guardado
-    console.log('Nuevo usuario:', { nombre, cargo, curp, telefono, email, password });
-
-    alert(`Usuario creado exitosamente!\n\nNombre: ${nombre}\nCargo: ${cargo}\nCorreo: ${email}\n\nSe ha enviado un correo de confirmación al usuario.`);
-
-    closeAddUserModal();
-    
-    // Aquí iría la llamada a la API para guardar el usuario
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Error al crear usuario. Por favor, intente nuevamente.');
+    });
 }
 
 // ========== MODAL EDITAR USUARIO ==========
 function openEditUserModal(userId) {
-    const user = usersDatabase[userId];
-    if (!user) {
-        alert('Usuario no encontrado');
-        return;
-    }
-
     currentEditingUserId = userId;
 
-    // Llenar formulario con datos actuales
-    document.getElementById('editUserId').value = userId;
-    document.getElementById('editNombreCompleto').value = user.nombre;
-    document.getElementById('editCargo').value = user.cargo;
-    document.getElementById('editCurp').value = user.curp;
-    document.getElementById('editTelefono').value = user.telefono;
-    document.getElementById('editEmail').value = user.email;
-    document.getElementById('editUserSubtitle').textContent = `Editando: ${user.nombre}`;
+    // Cargar datos del usuario desde el servidor
+    fetch(BASE_URL + 'admin/obtenerUsuario/' + userId)
+    .then(response => response.json())
+    .then(data => {
+        if (data.success && data.usuario) {
+            const user = data.usuario;
+            
+            // Llenar formulario con datos actuales
+            document.getElementById('editUserId').value = userId;
+            document.getElementById('editNombreCompleto').value = `${user.nombre} ${user.apellidoP} ${user.apellidoM || ''}`.trim();
+            document.getElementById('editCargo').value = user.adm;
+            document.getElementById('editCurp').value = user.expediente;
+            document.getElementById('editEmail').value = user.email;
+            document.getElementById('editUserSubtitle').textContent = `Editando: ${user.nombre} ${user.apellidoP}`;
 
-    document.getElementById('editUserModal').classList.remove('hidden');
+            document.getElementById('editUserModal').classList.remove('hidden');
+        } else {
+            alert('Error al cargar datos del usuario');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Error al cargar datos del usuario. Por favor, intente nuevamente.');
+    });
 }
 
 function closeEditUserModal() {
@@ -157,7 +130,6 @@ function saveEditUser() {
     const nombre = document.getElementById('editNombreCompleto').value.trim();
     const cargo = document.getElementById('editCargo').value;
     const curp = document.getElementById('editCurp').value.trim().toUpperCase();
-    const telefono = document.getElementById('editTelefono').value.trim();
     const email = document.getElementById('editEmail').value.trim();
 
     // Validar CURP
@@ -167,29 +139,34 @@ function saveEditUser() {
         return;
     }
 
-    // Validar teléfono
-    const telefonoPattern = /^[0-9]{10}$/;
-    if (!telefonoPattern.test(telefono)) {
-        alert('El teléfono debe contener exactamente 10 dígitos numéricos.');
-        return;
-    }
+    // Crear FormData con los datos
+    const formData = new FormData();
+    formData.append(CSRF_TOKEN_NAME, CSRF_HASH);
+    formData.append('id_adm', userId);
+    formData.append('nombre', nombre);
+    formData.append('adm', cargo);
+    formData.append('expediente', curp);
+    formData.append('email', email);
 
-    // Validar email único (excepto el del usuario actual)
-    for (let id in usersDatabase) {
-        if (id !== userId && usersDatabase[id].email.toLowerCase() === email.toLowerCase()) {
-            alert('El correo electrónico ya está registrado por otro usuario.');
-            return;
+    // Enviar al servidor
+    fetch(BASE_URL + 'admin/actualizarUsuario', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert(`Usuario actualizado exitosamente!\n\nNombre: ${nombre}\nCargo: ${cargo === '1' ? 'Administrador' : 'Inspector'}\nCorreo: ${email}`);
+            closeEditUserModal();
+            location.reload(); // Recargar página para mostrar cambios
+        } else {
+            alert('Error al actualizar usuario: ' + (data.error || 'Error desconocido'));
         }
-    }
-
-    // Simular actualización
-    console.log('Usuario actualizado:', { userId, nombre, cargo, curp, telefono, email });
-
-    alert(`Usuario actualizado exitosamente!\n\nNombre: ${nombre}\nCargo: ${cargo}\nCorreo: ${email}`);
-
-    closeEditUserModal();
-    
-    // Aquí iría la llamada a la API para actualizar el usuario
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Error al actualizar usuario. Por favor, intente nuevamente.');
+    });
 }
 
 // ========== MODAL DESACTIVAR/ACTIVAR USUARIO ==========
@@ -247,17 +224,31 @@ function executeAction() {
         return;
     }
 
-    if (currentAction === 'deactivate') {
-        console.log(`Desactivando usuario ${currentActionUserId}`);
-        alert(`Usuario ${currentActionUserName} ha sido desactivado exitosamente.\n\nSe ha enviado una notificación por correo.`);
-    } else if (currentAction === 'activate') {
-        console.log(`Activando usuario ${currentActionUserId}`);
-        alert(`Usuario ${currentActionUserName} ha sido activado exitosamente.\n\nSe ha enviado una notificación por correo.`);
-    }
+    const activo = currentAction === 'activate' ? '1' : '0';
+    const formData = new FormData();
+    formData.append(CSRF_TOKEN_NAME, CSRF_HASH);
+    formData.append('id_adm', currentActionUserId);
+    formData.append('activo', activo);
 
-    closeConfirmActionModal();
-    
-    // Aquí iría la llamada a la API para activar/desactivar el usuario
+    fetch(BASE_URL + 'admin/cambiarEstadoUsuario', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            const accion = currentAction === 'activate' ? 'activado' : 'desactivado';
+            alert(`Usuario ${currentActionUserName} ha sido ${accion} exitosamente.\n\nSe ha enviado una notificación por correo.`);
+            closeConfirmActionModal();
+            location.reload(); // Recargar página para reflejar cambios
+        } else {
+            alert('Error al cambiar estado del usuario: ' + (data.error || 'Error desconocido'));
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Error al cambiar estado del usuario. Por favor, intente nuevamente.');
+    });
 }
 
 // ========== MODAL RESET PASSWORD ==========
@@ -266,20 +257,13 @@ let currentResetPasswordUserName = null;
 let pendingNewPassword = null;
 
 function openResetPasswordModal(userId, userName) {
-    const user = usersDatabase[userId];
-    if (!user) {
-        alert('Usuario no encontrado');
-        return;
-    }
-
     currentResetPasswordUserId = userId;
     currentResetPasswordUserName = userName;
 
     // Llenar información del usuario
     document.getElementById('resetPasswordUserId').value = userId;
-    document.getElementById('resetPasswordUserName').textContent = user.nombre;
-    document.getElementById('resetPasswordUserEmail').textContent = user.email;
-    document.getElementById('resetPasswordSubtitle').textContent = `Cambiar contraseña de ${user.nombre}`;
+    document.getElementById('resetPasswordUserName').textContent = userName;
+    document.getElementById('resetPasswordSubtitle').textContent = `Cambiar contraseña de ${userName}`;
 
     // Resetear formulario
     document.getElementById('resetPasswordForm').reset();
@@ -340,19 +324,30 @@ function executeResetPassword() {
         return;
     }
 
-    // Simular actualización de contraseña
-    console.log(`Restableciendo contraseña para usuario ${currentResetPasswordUserId}:`, {
-        userId: currentResetPasswordUserId,
-        newPassword: pendingNewPassword
+    const formData = new FormData();
+    formData.append(CSRF_TOKEN_NAME, CSRF_HASH);
+    formData.append('id_adm', currentResetPasswordUserId);
+    formData.append('new_password', pendingNewPassword);
+    formData.append('new_password_confirm', pendingNewPassword);
+
+    fetch(BASE_URL + 'admin/restablecerPassword', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert(`Contraseña restablecida exitosamente para ${currentResetPasswordUserName}!\n\nSe ha enviado un correo de confirmación al usuario con instrucciones para su próximo inicio de sesión.`);
+            closeConfirmResetPasswordModal();
+            closeResetPasswordModal();
+        } else {
+            alert('Error al restablecer contraseña: ' + (data.error || 'Error desconocido'));
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Error al restablecer contraseña. Por favor, intente nuevamente.');
     });
-
-    alert(`Contraseña restablecida exitosamente para ${currentResetPasswordUserName}!\n\nSe ha enviado un correo de confirmación al usuario con instrucciones para su próximo inicio de sesión.`);
-
-    // Cerrar ambos modales
-    closeConfirmResetPasswordModal();
-    closeResetPasswordModal();
-
-    // Aquí iría la llamada a la API para actualizar la contraseña
 }
 
 // Función para mostrar/ocultar contraseña
@@ -370,6 +365,27 @@ function togglePasswordVisibility(inputId, iconId) {
 }
 
 // ========== FUNCIONES AUXILIARES ==========
+function filtrarUsuarios() {
+    const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+    const filtroRol = document.getElementById('filtroRol').value.toLowerCase();
+    const filas = document.querySelectorAll('#tablaUsuarios tbody tr');
+
+    filas.forEach(fila => {
+        const nombre = fila.getAttribute('data-nombre') || '';
+        const email = fila.getAttribute('data-email') || '';
+        const rol = fila.getAttribute('data-rol') || '';
+
+        const coincideBusqueda = nombre.includes(searchTerm) || email.includes(searchTerm);
+        const coincideRol = !filtroRol || rol.toLowerCase().includes(filtroRol);
+
+        if (coincideBusqueda && coincideRol) {
+            fila.style.display = '';
+        } else {
+            fila.style.display = 'none';
+        }
+    });
+}
+
 function closeModalOnOverlay(event, modalId) {
     if (event.target.id === modalId) {
         document.getElementById(modalId).classList.add('hidden');
@@ -382,12 +398,16 @@ function closeModalOnOverlay(event, modalId) {
             currentAction = null;
             currentActionUserId = null;
             currentActionUserName = null;
+        } else if (modalId === 'resetPasswordModal') {
+            closeResetPasswordModal();
+        } else if (modalId === 'confirmResetPasswordModal') {
+            closeConfirmResetPasswordModal();
         }
     }
 }
 
 // ========== EVENT LISTENERS ==========
-// Cerrar modales con tecla Escape - actualizado
+// Cerrar modales con tecla Escape
 document.addEventListener('keydown', function(event) {
     if (event.key === 'Escape') {
         closeAddUserModal();

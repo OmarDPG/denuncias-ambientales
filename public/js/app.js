@@ -438,7 +438,7 @@ function displayFilePreview(file) {
     }
 
     const removeBtn = document.createElement('button');
-    removeBtn.innerHTML = '×';
+    removeBtn.innerHTML = '�-';
     removeBtn.onclick = function () {
         uploadedFiles = uploadedFiles.filter(f => f !== file);
         formData.files = uploadedFiles;
@@ -449,7 +449,26 @@ function displayFilePreview(file) {
     preview.appendChild(fileDiv);
 }
 
-// Form Submission
+// �"?�"?�"? Helpers de seguridad �"?�"?�"?�"?�"?�"?�"?�"?�"?�"?�"?�"?�"?�"?�"?�"?�"?�"?�"?�"?�"?�"?�"?�"?�"?�"?�"?�"?�"?�"?�"?�"?�"?�"?�"?�"?�"?�"?�"?�"?�"?�"?�"?�"?�"?�"?�"?�"?�"?�"?�"?�"?�"?
+
+// Lee el token CSRF desde la cookie que emite CodeIgniter
+function getCsrfToken() {
+    const cookieName = 'csrf_cookie_name';
+    for (const raw of document.cookie.split(';')) {
+        const c = raw.trim();
+        if (c.startsWith(cookieName + '=')) {
+            return decodeURIComponent(c.substring(cookieName.length + 1));
+        }
+    }
+    return '';
+}
+
+// Devuelve la base URL definida en el meta tag por PHP
+function getBaseUrl() {
+    return document.querySelector('meta[name="base-url"]')?.content ?? '/';
+}
+
+// �"?�"?�"? Envío del formulario (AJAX) �"?�"?�"?�"?�"?�"?�"?�"?�"?�"?�"?�"?�"?�"?�"?�"?�"?�"?�"?�"?�"?�"?�"?�"?�"?�"?�"?�"?�"?�"?�"?�"?�"?�"?�"?�"?�"?�"?�"?�"?�"?�"?�"?�"?�"?�"?
 function submitForm(event) {
     event.preventDefault();
 
@@ -457,44 +476,103 @@ function submitForm(event) {
         return;
     }
 
-    // Generate reference ID
-    const refId = 'LIVA-' + new Date().getFullYear() + '-' + Math.floor(Math.random() * 10000);
+    // Construir FormData con todos los campos recolectados por el JS
+    const fd = new FormData();
 
-    // In a real app, this would send data to server
-    console.log('Submitting form:', formData);
+    // Agregar token CSRF
+    fd.append('csrf_test_name', getCsrfToken());
 
-    // Show success toast
-    document.getElementById('referenceId').textContent = 'Referencia: ' + refId;
-    const toast = document.getElementById('successToast');
-    toast.classList.add('show');
+    // Paso 1 �?" Denunciante
+    fd.append('tipo_persona',         formData.tipoPersona);
+    fd.append('nombre_completo',      formData.nombreCompleto);
+    fd.append('genero',               formData.genero);
+    fd.append('estado',               formData.estado);
+    fd.append('municipio',            formData.municipio);
+    fd.append('colonia',              formData.colonia);
+    fd.append('codigo_postal',        formData.codigoPostal);
+    fd.append('calle',                formData.calle);
+    fd.append('numero_exterior',      formData.numeroExterior);
+    fd.append('numero_interior',      formData.numeroInterior || '');
+    fd.append('email',                formData.email);
+    fd.append('telefono',             formData.telefono);
+    fd.append('es_representante',     formData.esRepresentante     ? 'true' : 'false');
+    fd.append('razon_social',         formData.razonSocial         || '');
+    fd.append('nombre_representante', formData.nombreRepresentante || '');
 
-    // Reset form
-    setTimeout(function () {
-        document.getElementById('complaintForm').reset();
-        uploadedFiles = [];
-        document.getElementById('filePreview').innerHTML = '';
+    // Paso 2 �?" Denuncia y ubicación
+    fd.append('tipo_denuncia',      formData.tipoDenuncia);
+    fd.append('hechos_denunciados', formData.hechosDenunciados);
+    fd.append('latitud',            formData.latitude  ?? '');
+    fd.append('longitud',           formData.longitude ?? '');
 
-        // Hide legal rep fields after reset
-        document.getElementById('legalRepFields').style.display = 'none';
-        document.getElementById('denunciadoMoralFields').style.display = 'none';
+    // Paso 3 �?" Denunciado
+    fd.append('nombre_denunciado',          formData.nombreDenunciado);
+    fd.append('denunciado_es_moral',        formData.denunciadoEsMoral ? 'true' : 'false');
+    fd.append('razon_social_denunciado',    formData.razonSocialDenunciado    || '');
+    fd.append('municipio_denunciado',       formData.municipioDenunciado);
+    fd.append('colonia_denunciado',         formData.coloniaDenunciado);
+    fd.append('calle_denunciado',           formData.calleDenunciado);
+    fd.append('codigo_postal_denunciado',   formData.codigoPostalDenunciado);
+    fd.append('numero_exterior_denunciado', formData.numeroExteriorDenunciado);
+    fd.append('numero_interior_denunciado', formData.numeroInteriorDenunciado || '');
 
-        // Remove marker from map
-        if (marker) {
-            map.removeLayer(marker);
-            marker = null;
-        }
+    // Archivos de evidencia
+    uploadedFiles.forEach(function (file) {
+        fd.append('evidencias[]', file, file.name);
+    });
 
-        document.getElementById('latitude').value = '';
-        document.getElementById('longitude').value = '';
-        currentStep = 1;
-        updateSteps();
-        localStorage.removeItem('complaintDraft');
+    // Prevenir doble envío
+    const submitBtn = document.getElementById('submitBtn');
+    submitBtn.disabled    = true;
+    submitBtn.textContent = 'Enviando...';
 
-        // Hide toast after 5 seconds
-        setTimeout(function () {
-            toast.classList.remove('show');
-        }, 5000);
-    }, 2000);
+    fetch(document.getElementById('complaintForm').action, {
+        method:  'POST',
+        headers: { 'X-CSRF-TOKEN': getCsrfToken() },
+        body:    fd,
+    })
+        .then(function (res) {
+            if (!res.ok) { throw new Error('HTTP ' + res.status); }
+            return res.json();
+        })
+        .then(function (data) {
+            if (data.success) {
+                // Mostrar toast con folio real del servidor
+                document.getElementById('referenceId').textContent = 'Referencia: ' + data.folio;
+                document.getElementById('successToast').classList.add('show');
+
+                // Resetear formulario
+                document.getElementById('complaintForm').reset();
+                uploadedFiles = [];
+                document.getElementById('filePreview').innerHTML                 = '';
+                document.getElementById('legalRepFields').style.display          = 'none';
+                document.getElementById('denunciadoMoralFields').style.display   = 'none';
+
+                if (marker) { map.removeLayer(marker); marker = null; }
+                document.getElementById('latitude').value  = '';
+                document.getElementById('longitude').value = '';
+                formData.latitude  = null;
+                formData.longitude = null;
+
+                currentStep = 1;
+                updateSteps();
+                localStorage.removeItem('complaintDraft');
+
+                setTimeout(function () {
+                    document.getElementById('successToast').classList.remove('show');
+                }, 6000);
+            } else {
+                const errorMessages = Object.values(data.errors || {}).join('\n');
+                alert('Error al enviar la denuncia:\n' + (errorMessages || 'Error desconocido.'));
+            }
+        })
+        .catch(function () {
+            alert('Error de conexión. Por favor intente nuevamente.');
+        })
+        .finally(function () {
+            submitBtn.disabled    = false;
+            submitBtn.textContent = 'Enviar Denuncia';
+        });
 }
 
 // Draft Management
@@ -637,368 +715,114 @@ function resetReportModal() {
     // Hide results and show search form
     document.getElementById('reportResult').style.display = 'none';
     document.getElementById('notFoundMessage').style.display = 'none';
+    document.getElementById('documentoResolucionContainer').style.display = 'none';
     document.getElementById('searchForm').style.display = 'block';
     document.getElementById('folioInput').value = '';
 }
 
 function searchReport() {
-    const folio = document.getElementById('folioInput').value.trim();
+    const folio = document.getElementById('folioInput').value.trim().toUpperCase();
 
-    // Validate folio format
     if (!folio) {
         alert('Por favor ingrese un folio');
         return;
     }
 
-    // Simulate different report statuses based on folio
-    const mockReports = {
-        'LIVA-2026-1234': {
-            folio: 'LIVA-2026-1234',
-            tipo: 'Impacto Ambiental',
-            fecha: '15 de Marzo, 2026',
-            actualizacion: '28 de Marzo, 2026',
-            status: 'en-revision',
-            statusText: 'En Revisión',
-            statusIcon: 'pending',
-            descripcion: 'Su denuncia ha sido recibida y se encuentra en proceso de revisión por nuestro equipo técnico. Le notificaremos cualquier actualización.'
-        },
-        'LIVA-2026-5678': {
-            folio: 'LIVA-2026-5678',
-            tipo: 'Contaminación Atmosférica',
-            fecha: '10 de Marzo, 2026',
-            actualizacion: '29 de Marzo, 2026',
-            status: 'en-proceso',
-            statusText: 'En Proceso',
-            statusIcon: 'schedule',
-            descripcion: 'Su denuncia está siendo investigada activamente. El personal técnico ha realizado una visita de inspección al sitio reportado.'
-        },
-        'LIVA-2026-9999': {
-            folio: 'LIVA-2026-9999',
-            tipo: 'Residuos de Manejo Especial',
-            fecha: '1 de Marzo, 2026',
-            actualizacion: '30 de Marzo, 2026',
-            status: 'resuelta',
-            statusText: 'Resuelta',
-            statusIcon: 'check_circle',
-            descripcion: 'Su denuncia ha sido atendida satisfactoriamente. Se han tomado las medidas necesarias y el expediente ha sido cerrado.'
-        },
-        'LIVA-2026-0001': {
-            folio: 'LIVA-2026-0001',
-            tipo: 'Ordenamiento Territorial',
-            fecha: '5 de Febrero, 2026',
-            actualizacion: '10 de Febrero, 2026',
-            status: 'recibida',
-            statusText: 'Recibida',
-            statusIcon: 'inbox',
-            descripcion: 'Su denuncia ha sido registrada exitosamente y será asignada a un inspector en breve.'
-        }
-    };
+    const url = new URL('inicio/buscarReporte', getBaseUrl());
+    url.searchParams.set('folio', folio);
 
-    const report = mockReports[folio.toUpperCase()];
+    fetch(url.toString(), {
+        method:  'GET',
+        headers: { 'Accept': 'application/json' },
+    })
+        .then(function (res) {
+            if (!res.ok) { throw new Error('HTTP ' + res.status); }
+            return res.json();
+        })
+        .then(function (data) {
+            console.log('Datos recibidos del servidor:', data); // Log de depuración
+            
+            if (data.found) {
+                document.getElementById('resultFolio').textContent          = data.folio;
+                document.getElementById('resultTipo').textContent           = data.tipo_denuncia;
+                document.getElementById('resultFecha').textContent          = data.fecha_captura;
+                document.getElementById('resultActualizacion').textContent  = data.fecha_actualizacion;
+                document.getElementById('resultDescripcion').textContent    = data.notas_internas || 'Consulte con el personal de atención para más detalles sobre el estado de su denuncia.';
 
-    if (report) {
-        // Show report data
-        document.getElementById('resultFolio').textContent = report.folio;
-        document.getElementById('resultTipo').textContent = report.tipo;
-        document.getElementById('resultFecha').textContent = report.fecha;
-        document.getElementById('resultActualizacion').textContent = report.actualizacion;
-        document.getElementById('resultDescripcion').textContent = report.descripcion;
+                const statusBadge = document.getElementById('resultStatus');
+                statusBadge.className = 'status-badge status-' + data.estatus.class;
+                statusBadge.innerHTML =
+                    `<span class="material-symbols-outlined text-sm" style="font-variation-settings: 'FILL' 1;">${data.estatus.icon}</span>` +
+                    `<span>${data.estatus.text}</span>`;
 
-        // Update status badge
-        const statusBadge = document.getElementById('resultStatus');
-        statusBadge.className = 'status-badge status-' + report.status;
-        statusBadge.innerHTML = `
-          <span class="material-symbols-outlined text-sm" style="font-variation-settings: 'FILL' 1;">${report.statusIcon}</span>
-          <span>${report.statusText}</span>
-        `;
+                // Mostrar documento de resolución si existe
+                const documentoContainer = document.getElementById('documentoResolucionContainer');
+                const documentoDetalle = document.getElementById('documentoResolucionDetalle');
+                
+                console.log('Documento de resolución:', data.documento_resolucion); // Log de depuración
+                
+                if (data.documento_resolucion) {
+                    const doc = data.documento_resolucion;
+                    
+                    // Determinar icono según tipo de archivo
+                    let iconName = 'description';
+                    if (doc.tipo.includes('pdf')) iconName = 'picture_as_pdf';
+                    else if (doc.tipo.includes('image')) iconName = 'image';
+                    
+                    // Formatear tamaño
+                    const formatBytes = (bytes) => {
+                        if (bytes === 0) return '0 Bytes';
+                        const k = 1024;
+                        const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+                        const i = Math.floor(Math.log(bytes) / Math.log(k));
+                        return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
+                    };
+                    
+                    const urlDescarga = getBaseUrl() + `inicio/descargarDocumentoResolucion/${doc.id}?download=1`;
+                    const urlVer = getBaseUrl() + `inicio/descargarDocumentoResolucion/${doc.id}`;
+                    const canPreview = doc.tipo.includes('pdf') || doc.tipo.includes('image');
+                    
+                    documentoDetalle.innerHTML = `
+                        <div class="flex items-center gap-3 flex-1">
+                            <span class="material-symbols-outlined text-primary text-2xl">${iconName}</span>
+                            <div class="flex-1">
+                                <p class="font-medium text-on-surface text-sm">${doc.nombre}</p>
+                                <p class="text-xs text-secondary mt-1">${formatBytes(doc.peso)} • Oficio de Resolución</p>
+                            </div>
+                        </div>
+                        <div class="flex gap-2">
+                            ${canPreview ? `
+                                <a href="${urlVer}" 
+                                   target="_blank"
+                                   class="flex items-center gap-1 px-3 py-2 bg-surface-container text-primary border border-outline-variant/30 rounded-lg text-xs font-bold hover:bg-surface-container-high transition-all"
+                                   title="Abrir en nueva pestaña">
+                                    <span class="material-symbols-outlined text-sm">visibility</span>
+                                    Ver
+                                </a>
+                            ` : ''}
+                            <a href="${urlDescarga}" 
+                               class="flex items-center gap-1 px-3 py-2 bg-primary text-white rounded-lg text-xs font-bold hover:opacity-90 transition-all"
+                               title="Descargar documento">
+                                <span class="material-symbols-outlined text-sm">download</span>
+                                Descargar
+                            </a>
+                        </div>
+                    `;
+                    
+                    documentoContainer.style.display = 'block';
+                } else {
+                    documentoContainer.style.display = 'none';
+                }
 
-        // Hide search form and show result
-        document.getElementById('searchForm').style.display = 'none';
-        document.getElementById('reportResult').style.display = 'block';
-    } else {
-        // Show not found message
-        document.getElementById('searchForm').style.display = 'none';
-        document.getElementById('notFoundMessage').style.display = 'block';
-    }
+                document.getElementById('searchForm').style.display   = 'none';
+                document.getElementById('reportResult').style.display = 'block';
+            } else {
+                document.getElementById('searchForm').style.display      = 'none';
+                document.getElementById('notFoundMessage').style.display = 'block';
+            }
+        })
+        .catch(function () {
+            alert('Error de conexión. Por favor intente nuevamente.');
+        });
 }
-
-
-
-//Scripts para manejo del modal
-// Datos de ejemplo simulando una base de datos
-const complaintsDatabase = {
-    'ARC-9821': {
-        folio: '#ARC-9821',
-        fechaReporte: 'Oct 24, 2023',
-        estado: { text: 'Critical', class: 'bg-error-container text-on-error-container' },
-        denunciante: {
-            tipoPersona: 'Persona Física',
-            nombre: 'Juan Pérez García',
-            genero: 'Masculino',
-            email: 'juan.perez@example.com',
-            telefono: '2221234567',
-            direccion: {
-                calle: 'Calle 5 de Mayo',
-                numeroExterior: '123',
-                numeroInterior: '',
-                colonia: 'Centro',
-                municipio: 'Puebla',
-                estado: 'Puebla',
-                codigoPostal: '72000'
-            },
-            representanteLegal: null
-        },
-        denuncia: {
-            categoria: { text: 'Contaminación de Agua', icon: 'water_drop' },
-            ubicacion: 'Silver Creek Watershed',
-            coordenadas: { latitud: '19.0414', longitud: '-98.2063' },
-            hechos: 'Se ha detectado contaminación severa en el cuerpo de agua debido a descargas industriales no autorizadas. El agua presenta coloración anormal y olor fétido. Los habitantes de la zona reportan mortandad de peces y fauna acuática. La situación requiere atención inmediata y análisis de calidad del agua.'
-        },
-        denunciado: {
-            nombre: 'Industrias Químicas del Centro S.A. de C.V.',
-            esMoral: true,
-            razonSocial: 'Industrias Químicas del Centro S.A. de C.V.',
-            direccion: {
-                calle: 'Av. Industrial',
-                numeroExterior: '456',
-                numeroInterior: 'Nave 3',
-                colonia: 'Parque Industrial',
-                municipio: 'Puebla',
-                codigoPostal: '72220'
-            }
-        },
-        evidencias: []
-    },
-    'ARC-9745': {
-        folio: '#ARC-9745',
-        fechaReporte: 'Oct 22, 2023',
-        estado: { text: 'Solved', class: 'bg-tertiary-fixed text-on-tertiary-fixed-variant' },
-        denunciante: {
-            tipoPersona: 'Persona Física',
-            nombre: 'María González López',
-            genero: 'Femenino',
-            email: 'maria.gonzalez@example.com',
-            telefono: '2229876543',
-            direccion: {
-                calle: 'Calle Reforma',
-                numeroExterior: '89',
-                numeroInterior: 'A',
-                colonia: 'La Paz',
-                municipio: 'Puebla',
-                estado: 'Puebla',
-                codigoPostal: '72160'
-            },
-            representanteLegal: null
-        },
-        denuncia: {
-            categoria: { text: 'Tala Ilegal', icon: 'forest' },
-            ubicacion: 'North Canopy Reserve',
-            coordenadas: { latitud: '19.1234', longitud: '-98.3456' },
-            hechos: 'Se ha observado tala indiscriminada de árboles en zona protegida durante las últimas dos semanas. Se han talado aproximadamente 50 árboles de especies nativas sin ningún permiso visible. El área afectada es de aproximadamente 2 hectáreas.'
-        },
-        denunciado: {
-            nombre: 'Pedro Martínez Sánchez',
-            esMoral: false,
-            direccion: {
-                calle: 'Carretera Federal',
-                numeroExterior: 'Km 12',
-                numeroInterior: '',
-                colonia: 'San Miguel',
-                municipio: 'Cholula',
-                codigoPostal: '72810'
-            }
-        },
-        evidencias: []
-    },
-    'ARC-9612': {
-        folio: '#ARC-9612',
-        fechaReporte: 'Oct 21, 2023',
-        estado: { text: 'Pendiente', class: 'bg-secondary-container text-on-secondary-container' },
-        denunciante: {
-            tipoPersona: 'Persona Moral',
-            nombre: 'Asociación Civil Ambiental Puebla A.C.',
-            genero: 'N/A',
-            email: 'contacto@acap.org',
-            telefono: '2225551234',
-            direccion: {
-                calle: 'Boulevard Atlixco',
-                numeroExterior: '2505',
-                numeroInterior: 'Piso 3',
-                colonia: 'La Paz',
-                municipio: 'Puebla',
-                estado: 'Puebla',
-                codigoPostal: '72160'
-            },
-            representanteLegal: {
-                razonSocial: 'Asociación Civil Ambiental Puebla A.C.',
-                nombreRepresentante: 'Lic. Roberto Flores Méndez'
-            }
-        },
-        denuncia: {
-            categoria: { text: 'Contaminación Atmosférica', icon: 'factory' },
-            ubicacion: 'Industrial Zone B',
-            coordenadas: { latitud: '19.0521', longitud: '-98.2198' },
-            hechos: 'Emisiones de humo negro constante desde hace 3 meses. El humo tiene olor químico fuerte que afecta a los vecinos de la zona. No se observan filtros ni chimeneas adecuadas. Los residentes reportan problemas respiratorios.'
-        },
-        denunciado: {
-            nombre: 'Quien resulte responsable',
-            esMoral: false,
-            direccion: {
-                calle: 'Calle Industrial',
-                numeroExterior: 's/n',
-                numeroInterior: '',
-                colonia: 'Zona Industrial',
-                municipio: 'Puebla',
-                codigoPostal: '72220'
-            }
-        },
-        evidencias: []
-    },
-    'ARC-9588': {
-        folio: '#ARC-9588',
-        fechaReporte: 'Oct 19, 2023',
-        estado: { text: 'Approved', class: 'bg-primary-fixed text-on-primary-fixed-variant' },
-        denunciante: {
-            tipoPersona: 'Persona Física',
-            nombre: 'Carlos Ramírez Torres',
-            genero: 'Masculino',
-            email: 'carlos.ramirez@example.com',
-            telefono: '2223334455',
-            direccion: {
-                calle: 'Avenida Juárez',
-                numeroExterior: '1234',
-                numeroInterior: '',
-                colonia: 'Centro',
-                municipio: 'Puebla',
-                estado: 'Puebla',
-                codigoPostal: '72000'
-            },
-            representanteLegal: null
-        },
-        denuncia: {
-            categoria: { text: 'Caza Furtiva', icon: 'pets' },
-            ubicacion: 'Eastern Steppe',
-            coordenadas: { latitud: '19.0789', longitud: '-98.1234' },
-            hechos: 'Se ha detectado actividad de caza ilegal en zona protegida. Se encontraron trampas para animales silvestres y evidencia de captura de especies en peligro de extinción. Los cazadores operan principalmente durante la noche.'
-        },
-        denunciado: {
-            nombre: 'Quien resulte responsable',
-            esMoral: false,
-            direccion: {
-                calle: 'N/A',
-                numeroExterior: 'N/A',
-                numeroInterior: '',
-                colonia: 'N/A',
-                municipio: 'Puebla',
-                codigoPostal: 'N/A'
-            }
-        },
-        evidencias: []
-    }
-};
-
-// Función para abrir el modal con los detalles
-function openDetailModal(folio) {
-    const data = complaintsDatabase[folio];
-    if (!data) {
-        console.error('Denuncia no encontrada:', folio);
-        return;
-    }
-
-    // Llenar información del reporte
-    document.getElementById('modalFolio').textContent = data.folio;
-    document.getElementById('modalFechaReporte').textContent = data.fechaReporte;
-    document.getElementById('modalEstado').textContent = data.estado.text;
-    document.getElementById('modalEstado').className = `inline-flex items-center px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider ${data.estado.class}`;
-
-    // Llenar datos del denunciante
-    document.getElementById('modalTipoPersona').textContent = data.denunciante.tipoPersona;
-    document.getElementById('modalNombreDenunciante').textContent = data.denunciante.nombre;
-    document.getElementById('modalGenero').textContent = data.denunciante.genero;
-    document.getElementById('modalEmail').textContent = data.denunciante.email;
-    document.getElementById('modalTelefono').textContent = data.denunciante.telefono;
-
-    // Construir dirección del denunciante
-    const dirDen = data.denunciante.direccion;
-    const direccionDenunciante = `${dirDen.calle} #${dirDen.numeroExterior}${dirDen.numeroInterior ? ' Int. ' + dirDen.numeroInterior : ''}, Col. ${dirDen.colonia}, ${dirDen.municipio}, ${dirDen.estado}, CP ${dirDen.codigoPostal}`;
-    document.getElementById('modalDireccionDenunciante').textContent = direccionDenunciante;
-
-    // Mostrar/ocultar sección de representante legal
-    const repSection = document.getElementById('modalRepresentanteSection');
-    if (data.denunciante.representanteLegal) {
-        repSection.style.display = 'block';
-        document.getElementById('modalRazonSocial').textContent = data.denunciante.representanteLegal.razonSocial;
-        document.getElementById('modalNombreRepresentante').textContent = data.denunciante.representanteLegal.nombreRepresentante;
-    } else {
-        repSection.style.display = 'none';
-    }
-
-    // Llenar detalles de la denuncia
-    document.getElementById('modalCategoria').textContent = data.denuncia.categoria.text;
-    document.getElementById('modalCategoriaIcon').textContent = data.denuncia.categoria.icon;
-    document.getElementById('modalUbicacion').textContent = data.denuncia.ubicacion;
-    document.getElementById('modalLatitud').textContent = data.denuncia.coordenadas.latitud;
-    document.getElementById('modalLongitud').textContent = data.denuncia.coordenadas.longitud;
-    document.getElementById('modalHechosDenunciados').textContent = data.denuncia.hechos;
-
-    // Llenar datos del denunciado
-    document.getElementById('modalNombreDenunciado').textContent = data.denunciado.nombre;
-
-    const razonSocialDiv = document.getElementById('modalRazonSocialDenunciadoDiv');
-    if (data.denunciado.esMoral && data.denunciado.razonSocial) {
-        razonSocialDiv.style.display = 'block';
-        document.getElementById('modalRazonSocialDenunciado').textContent = data.denunciado.razonSocial;
-    } else {
-        razonSocialDiv.style.display = 'none';
-    }
-
-    // Construir dirección del denunciado
-    const dirDenun = data.denunciado.direccion;
-    const direccionDenunciado = `${dirDenun.calle} #${dirDenun.numeroExterior}${dirDenun.numeroInterior ? ' Int. ' + dirDenun.numeroInterior : ''}, Col. ${dirDenun.colonia}, ${dirDenun.municipio}, CP ${dirDenun.codigoPostal}`;
-    document.getElementById('modalDireccionDenunciado').textContent = direccionDenunciado;
-
-    // Evidencias (vacío por ahora)
-    const evidenciasContainer = document.getElementById('modalEvidencias');
-    if (data.evidencias && data.evidencias.length > 0) {
-        evidenciasContainer.innerHTML = data.evidencias.map(ev => `
-          <div class="aspect-square rounded-lg overflow-hidden border border-outline-variant/20">
-            <img src="${ev}" alt="Evidencia" class="w-full h-full object-cover">
-          </div>
-        `).join('');
-    } else {
-        evidenciasContainer.innerHTML = '<div class="col-span-full text-center text-secondary text-sm py-8">No hay evidencias adjuntas</div>';
-    }
-
-    // Mostrar el modal
-    document.getElementById('complaintDetailModal').classList.remove('hidden');
-    document.body.style.overflow = 'hidden';
-}
-
-// Función para cerrar el modal
-function closeDetailModal() {
-    document.getElementById('complaintDetailModal').classList.add('hidden');
-    document.body.style.overflow = 'auto';
-}
-
-// Función para cerrar modal al hacer clic fuera
-function closeDetailModalOnOverlay(event) {
-    if (event.target.id === 'complaintDetailModal') {
-        closeDetailModal();
-    }
-}
-
-// Cerrar modal con tecla Escape
-document.addEventListener('keydown', function (event) {
-    if (event.key === 'Escape') {
-        const modal = document.getElementById('complaintDetailModal');
-        if (modal && !modal.classList.contains('hidden')) {
-            closeDetailModal();
-        }
-    }
-});
-
-
-
-
-
 

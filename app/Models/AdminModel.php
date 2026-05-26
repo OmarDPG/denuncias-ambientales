@@ -4,17 +4,17 @@ namespace App\Models;
 
 use CodeIgniter\Model;
 
-class ArchivosDenunciasModel extends Model
+class AdminModel extends Model
 {
-    protected $table      = 'evidencias_denuncia';
-    protected $primaryKey = 'id_evidencia';
+    protected $table      = 'admin';
+    protected $primaryKey = 'id_adm';
 
     protected $useAutoIncrement = true;
 
     protected $returnType     = 'array';
     protected $useSoftDeletes = false;
 
-    protected $allowedFields = ['id_evidencia', 'id_denuncia', 'nombre_original', 'ruta_archivo', 'tipo_archivo', 'tipo_documento', 'peso_bytes', 'fecha_subida',];
+    protected $allowedFields = ['id_adm', 'email', 'usuario', 'password', 'nombre', 'apellidoP', 'apellidoM', 'expediente', 'fecha_alta', 'fecha_ultima', 'activo', 'adm'];
 
     protected $useTimestamps = false;
 

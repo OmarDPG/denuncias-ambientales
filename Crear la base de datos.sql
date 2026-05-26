@@ -71,3 +71,20 @@ CREATE TABLE evidencias_denuncia (
         REFERENCES denuncias(id_denuncia) 
         ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+
+CREATE TABLE `admin` (
+    `id_adm` int(11) NOT NULL,
+    `usuario` varchar(250) DEFAULT NULL,
+    `password` varchar(250) DEFAULT NULL,
+    `nombre` varchar(250) DEFAULT NULL,
+    `apellidoP` varchar(250) DEFAULT NULL,
+    `apellidoM` varchar(250) DEFAULT NULL,
+    `expediente` varchar(10) DEFAULT NULL,
+    `fecha_alta` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+    `fecha_ultima` timestamp NULL DEFAULT NULL,
+    `activo` tinyint(1) NOT NULL DEFAULT 1,
+    `adm` tinyint(1) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_spanish_ci;
+INSERT INTO `admin` (`id_adm`, `usuario`, `password`, `nombre`, `apellidoP`, `apellidoM`, `expediente`, `fecha_alta`, `fecha_ultima`, `activo`, `adm`) VALUES
+(1, 'administrador', '$2y$10$ofxM0DQDgEBl1V6hJtNLg.vdgARQmqy9MqbGoUSu0y/XBxWlTLNpO', 'ADMINISTRADOR', 'ADMINISTRADOR', 'ADMINISTRADOR', '141855', '2024-03-01 20:29:59', '2024-03-01 20:29:59', 1, 1);
