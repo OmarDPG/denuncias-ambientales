@@ -1,4 +1,14 @@
 /* Admin Console Styles */
+body {
+  visibility: hidden;
+  opacity: 0;
+  transition: opacity 0.3s ease-in;
+}
+
+body.loaded {
+  visibility: visible;
+  opacity: 1;
+}
 
 body {
   font-family: 'Inter', sans-serif;

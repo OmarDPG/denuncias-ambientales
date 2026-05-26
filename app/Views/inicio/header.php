@@ -97,14 +97,14 @@
 
 <body class="bg-surface font-body text-on-surface flex flex-col min-h-screen">
     <!-- TopNavBar -->
-    <header class="docked full-width top-0 sticky z-50 bg-[#1b4332] text-white">
+    <header class="full-width top-0 sticky z-50 bg-[#1b4332] text-white">
         <nav class="flex justify-between items-center w-full px-8 py-4 max-w-full font-manrope font-bold tracking-tight">
             <div class="flex items-center gap-8">
                 <!-- Government Logos -->
                 <div class="flex items-center gap-4">
-                    <img src="<?= base_url('img/PueblaBeige.png') ?>" alt="Amor a Puebla" class="h-12 md:h-12 w-auto">
+                    <img src="<?= base_url('img/GOBPUE-DORADO.svg') ?>" alt="Amor a Puebla" class="h-16 md:h-16 w-auto">
                     <div class="hidden sm:block w-px h-10 bg-outline-variant/30"></div>
-                    <img src="<?= base_url('img/DesarrolloBeigue.png') ?>" alt="Pensar en Grande" class="h-12 md:h-12 w-auto">
+                    <img src="<?= base_url('img/DESARROLLO-SUSTENTABLE-DORADO.svg') ?>" alt="Pensar en Grande" class="h-16 md:h-16 w-auto">
                 </div>
             </div>
             <div class="flex items-center gap-4">

@@ -5,8 +5,8 @@
 <head>
     <meta charset="utf-8" />
     <meta content="width=device-width, initial-scale=1.0" name="viewport" />
-    <title>Iniciar Sesión | El Archivo Vivo</title>
-    
+    <title>Iniciar Sesión | Denuncias Ambientales</title>
+
     <!-- Stylesheets -->
     <link rel="stylesheet" href="<?php echo base_url('styles/admin.css'); ?>" />
     <link
@@ -16,8 +16,20 @@
         href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap"
         rel="stylesheet" />
     <link rel="icon" type="image/png" href="<?php echo base_url('img/favicon.ico'); ?>" />
-    
-    
+
+    <style>
+        body {
+            visibility: hidden;
+            opacity: 0;
+            transition: opacity 0.3s ease-in;
+        }
+
+        body.loaded {
+            visibility: visible;
+            opacity: 1;
+        }
+    </style>
+
     <!-- Scripts -->
     <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
     <script id="tailwind-config">
@@ -79,12 +91,18 @@
                         "body": ["Inter"],
                         "label": ["Inter"]
                     },
-                    borderRadius: { "DEFAULT": "0.125rem", "lg": "0.25rem", "xl": "0.5rem", "full": "0.75rem" },
+                    borderRadius: {
+                        "DEFAULT": "0.125rem",
+                        "lg": "0.25rem",
+                        "xl": "0.5rem",
+                        "full": "0.75rem"
+                    },
                 },
             },
         }
     </script>
 </head>
+
 <body
     class="bg-surface font-body text-on-surface min-h-screen flex flex-col selection:bg-primary-fixed selection:text-on-primary-fixed">
     <main class="flex-grow flex items-center justify-center p-6 md:p-12 relative overflow-hidden">
@@ -111,10 +129,10 @@
                 </div>
                 <!-- Mensaje de error -->
                 <?php if ($error = session()->getFlashdata('error')): ?>
-                <div class="mb-6 p-3 bg-error-container border border-error/20 rounded-lg flex items-start gap-2">
-                    <span class="material-symbols-outlined text-error text-base mt-0.5">error</span>
-                    <p class="text-on-error-container text-sm font-body"><?= esc($error) ?></p>
-                </div>
+                    <div class="mb-6 p-3 bg-error-container border border-error/20 rounded-lg flex items-start gap-2">
+                        <span class="material-symbols-outlined text-error text-base mt-0.5">error</span>
+                        <p class="text-on-error-container text-sm font-body"><?= esc($error) ?></p>
+                    </div>
                 <?php endif; ?>
                 <!-- Login Form -->
                 <form method="post" action="<?php echo base_url('admin/login'); ?>" class="space-y-6">
@@ -182,7 +200,7 @@
             <div class="mb-4 md:mb-0">
                 <span class="text-white font-manrope font-bold text-lg">Denuncias Ambientales</span>
                 <p class="font-inter text-xs uppercase tracking-widest text-slate-300 opacity-80 mt-1">© 2026 Sistema de recepción, atención y seguimiento de denuncias populares en materia ambiental y ordenamiento
-            territorial.</p>
+                    territorial.</p>
             </div>
             <!-- <div class="flex flex-wrap justify-center gap-6">
                 <a class="font-inter text-xs uppercase tracking-widest text-slate-300 opacity-80 hover:opacity-100 transition-opacity"
@@ -197,5 +215,9 @@
         </div>
     </footer>
 </body>
-
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        document.body.classList.add('loaded');
+    });
+</script>
 </html>

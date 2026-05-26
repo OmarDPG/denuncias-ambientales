@@ -63,9 +63,9 @@
           <div class="">
             <img src="<?php echo base_url('img/amorDorado.png'); ?>" alt="Amor a Puebla" class="h-14 md:h-16 w-auto opacity-95">
           </div>
-          <div class="">
+          <!-- <div class="">
             <img src="<?php echo base_url('img/pensarDorado.png'); ?>" alt="Pensar en Grande" class="h-14 md:h-16 w-auto opacity-95">
-          </div>
+          </div> -->
         </div>
       </div>
     </div>
@@ -73,3 +73,8 @@
 
   <!-- Application Scripts -->
   <script src="<?php echo base_url('js/app.js'); ?>"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      document.body.classList.add('loaded');
+    });
+  </script>
