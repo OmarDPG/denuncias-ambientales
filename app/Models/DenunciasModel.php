@@ -35,6 +35,8 @@ class DenunciasModel extends Model
         'es_representante',
         'razon_social',
         'nombre_representante',
+        'id_tipo_denuncia',
+        'id_tema_denuncia',
         'tipo_denuncia',
         'hechos_denunciados',
         'latitud',
@@ -47,7 +49,8 @@ class DenunciasModel extends Model
         'calle_denunciado',
         'codigo_postal_denunciado',
         'numero_exterior_denunciado',
-        'numero_interior_denunciado'
+        'numero_interior_denunciado',
+        'clave_cvv'
     ];
 
     protected $useTimestamps = false;

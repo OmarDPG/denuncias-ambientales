@@ -4,23 +4,85 @@ namespace App\Controllers;
 
 use App\Models\ArchivosDenunciasModel;
 use App\Models\DenunciasModel;
+use App\Models\CentroVerificacionModel;
+use App\Models\TemaDenunciaModel;
+use App\Models\TipoDenunciaModel;
 
 class Inicio extends BaseController
 {
     protected DenunciasModel $denunciasModel;
     protected ArchivosDenunciasModel $archivosDenunciasModel;
+    protected CentroVerificacionModel $centroVerificacionModel;
+    protected TemaDenunciaModel $temaDenunciaModel;
+    protected TipoDenunciaModel $tipoDenunciaModel;
 
     public function __construct()
     {
         $this->denunciasModel        = new DenunciasModel();
         $this->archivosDenunciasModel = new ArchivosDenunciasModel();
+        $this->centroVerificacionModel = new CentroVerificacionModel();
+        $this->temaDenunciaModel = new TemaDenunciaModel();
+        $this->tipoDenunciaModel = new TipoDenunciaModel();
     }
 
     public function index()
     {
+        // Cargar tipos de denuncia activos
+        $data['tiposDenuncia'] = $this->tipoDenunciaModel->where('activo', 1)->findAll();
+        
         return view('inicio/header')
-            . view('inicio/index')
+            . view('inicio/index', $data)
             . view('inicio/footer');
+    }
+
+    // ─── API: Obtener temas por tipo de denuncia ─────────────────────────────────────
+    public function getTemasPorTipo(): \CodeIgniter\HTTP\ResponseInterface
+    {
+        $idTipo = $this->request->getGet('id_tipo');
+        
+        if (!$idTipo) {
+            return $this->response->setJSON([
+                'success' => false,
+                'message' => 'ID de tipo de denuncia no proporcionado'
+            ]);
+        }
+
+        $temas = $this->temaDenunciaModel
+            ->where('id_tipo_denuncia', $idTipo)
+            ->where('activo', 1)
+            ->findAll();
+
+        return $this->response->setJSON([
+            'success' => true,
+            'data' => $temas
+        ]);
+    }
+
+    // ─── API: Obtener centros de verificación vehicular ──────────────────────────────
+    public function getCentrosVerificacion(): \CodeIgniter\HTTP\ResponseInterface
+    {
+        $centros = $this->centroVerificacionModel
+            ->where('activo', 1)
+            ->orderBy('municipio', 'ASC')
+            ->orderBy('clave', 'ASC')
+            ->orderBy('direccion', 'ASC')
+            ->findAll();
+
+        return $this->response->setJSON([
+            'success' => true,
+            'data' => $centros
+        ]);
+    }
+
+    // ─── Helper: Obtener nombre del tipo de denuncia ─────────────────────────────────
+    private function obtenerNombreTipoDenuncia($idTipo): string
+    {
+        if (!$idTipo) {
+            return '';
+        }
+        
+        $tipo = $this->tipoDenunciaModel->find($idTipo);
+        return $tipo ? $tipo['nombre'] : '';
     }
 
     // ─── POST inicio/registrarDenuncia ────────────────────────────────────────────────
@@ -49,7 +111,9 @@ class Inicio extends BaseController
             'numero_interior'            => ['label' => 'Número Interior',       'rules' => 'permit_empty|max_length[50]'],
             'email'                      => ['label' => 'Correo Electrónico',    'rules' => 'required|valid_email|max_length[150]'],
             'telefono'                   => ['label' => 'Teléfono',              'rules' => 'required|exact_length[10]|numeric'],
-            'tipo_denuncia'              => ['label' => 'Tipo de Denuncia',      'rules' => 'required|in_list[Impacto Ambiental,Residuos Especiales,Contaminación Atmosférica,Contaminación Auditiva,Contaminación Visual,Ordenamiento Territorial]'],
+            'id_tipo_denuncia'           => ['label' => 'Tipo de Denuncia',      'rules' => 'required|numeric|is_not_unique[tipo_denuncia.id_tipo_denuncia]'],
+            'id_tema_denuncia'           => ['label' => 'Tema de Denuncia',      'rules' => 'permit_empty|numeric|is_not_unique[tema_denuncia.id_tema_denuncia]'],
+            'clave_cvv'                  => ['label' => 'Centro de Verificación','rules' => 'permit_empty|max_length[20]|is_not_unique[centros_verificacion_vehicular.clave]'],
             'hechos_denunciados'         => ['label' => 'Hechos Denunciados',    'rules' => 'required|min_length[20]|max_length[10000]'],
             'latitud'                    => ['label' => 'Latitud',               'rules' => 'permit_empty|decimal'],
             'longitud'                   => ['label' => 'Longitud',              'rules' => 'permit_empty|decimal'],
@@ -84,15 +148,58 @@ class Inicio extends BaseController
         // contiene el array de objetos UploadedFile cuando el campo es evidencias[]
         $todosArchivos = $this->request->getFiles();
         $archivos      = $todosArchivos['evidencias'] ?? [];
+        $archivosIdentificacion = $todosArchivos['identificacion'] ?? [];
         $allowedMimes  = ['image/jpeg', 'image/png', 'application/pdf'];
         $maxSizeKb     = 25 * 1024; // 25 MB en KB
+        $maxSizeKbIdentificacion = 10 * 1024; // 10 MB en KB
         $uploadPath    = WRITEPATH . 'uploads/evidencias/';
 
-        if (!empty($archivos)) {
-            if (!is_dir($uploadPath)) {
-                mkdir($uploadPath, 0755, true);
-            }
+        if (!is_dir($uploadPath)) {
+            mkdir($uploadPath, 0755, true);
+        }
 
+        // Procesar archivos de identificación
+        if (!empty($archivosIdentificacion)) {
+            foreach ($archivosIdentificacion as $archivo) {
+                if (!$archivo->isValid() || $archivo->hasMoved()) {
+                    continue;
+                }
+
+                // En Windows/WAMP, finfo_file() falla al leer archivos temporales de PHP.
+                // Aplicamos doble filtro: MIME reportado por el cliente + whitelist de extensiones.
+                $clientMime = $archivo->getClientMimeType();
+                $clientExt  = strtolower($archivo->getClientExtension());
+                $allowedExt = ['jpg', 'jpeg', 'png', 'pdf'];
+
+                if (!in_array($clientMime, $allowedMimes, true) || !in_array($clientExt, $allowedExt, true)) {
+                    return $this->response->setJSON([
+                        'success' => false,
+                        'errors'  => ['identificacion' => 'Tipo de archivo no permitido: ' . esc($archivo->getClientName())],
+                    ]);
+                }
+
+                if ($archivo->getSizeByUnit('kb') > $maxSizeKbIdentificacion) {
+                    return $this->response->setJSON([
+                        'success' => false,
+                        'errors'  => ['identificacion' => 'El archivo «' . esc($archivo->getClientName()) . '» excede el límite de 10 MB.'],
+                    ]);
+                }
+
+                $newName = $archivo->getRandomName();
+                $archivo->move($uploadPath, $newName);
+
+                $evidencias[] = [
+                    'nombre_original' => $archivo->getClientName(),
+                    'ruta_archivo'    => $newName,
+                    'tipo_archivo'    => $clientMime,
+                    'peso_bytes'      => $archivo->getSize(),
+                    'tipo_documento'  => 'Identificación',
+                ];
+            }
+        }
+
+        // Procesar archivos de evidencia
+        if (!empty($archivos)) {
             foreach ($archivos as $archivo) {
                 if (!$archivo->isValid() || $archivo->hasMoved()) {
                     continue;
@@ -153,7 +260,9 @@ class Inicio extends BaseController
             'es_representante'           => $esRepresentante ? 1 : 0,
             'razon_social'               => $esRepresentante ? $this->request->getPost('razon_social')         : null,
             'nombre_representante'       => $esRepresentante ? $this->request->getPost('nombre_representante') : null,
-            'tipo_denuncia'              => $this->request->getPost('tipo_denuncia'),
+            'id_tipo_denuncia'           => $this->request->getPost('id_tipo_denuncia') ?: null,
+            'id_tema_denuncia'           => $this->request->getPost('id_tema_denuncia') ?: null,
+            'tipo_denuncia'              => $this->obtenerNombreTipoDenuncia($this->request->getPost('id_tipo_denuncia')),
             'hechos_denunciados'         => $this->request->getPost('hechos_denunciados'),
             'latitud'                    => $this->request->getPost('latitud')  ?: null,
             'longitud'                   => $this->request->getPost('longitud') ?: null,
@@ -166,6 +275,7 @@ class Inicio extends BaseController
             'codigo_postal_denunciado'   => $this->request->getPost('codigo_postal_denunciado'),
             'numero_exterior_denunciado' => $this->request->getPost('numero_exterior_denunciado'),
             'numero_interior_denunciado' => $this->request->getPost('numero_interior_denunciado') ?: null,
+            'clave_cvv'                  => $this->request->getPost('clave_cvv') ?: null,
         ];
 
         $this->denunciasModel->skipValidation(true)->insert($dataDenuncia);

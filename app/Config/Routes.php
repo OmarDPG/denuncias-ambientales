@@ -10,6 +10,8 @@ $routes->get('/',  'Inicio::index');
 $routes->post('inicio/registrarDenuncia',        'Inicio::registrarDenuncia');
 $routes->get('inicio/buscarReporte',  'Inicio::buscarReporte');
 $routes->get('inicio/descargarDocumentoResolucion/(:num)', 'Inicio::descargarDocumentoResolucion/$1');
+$routes->get('inicio/getTemasPorTipo', 'Inicio::getTemasPorTipo');
+$routes->get('inicio/getCentrosVerificacion', 'Inicio::getCentrosVerificacion');
 
 $routes->post('admin/actualizarEstado', 'Admin::actualizarEstado');
 $routes->get('admin/verEvidencia/(:num)', 'Admin::verEvidencia/$1');

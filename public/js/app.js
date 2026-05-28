@@ -1,6 +1,7 @@
 // Global state
 let currentStep = 1;
 let uploadedFiles = [];
+let uploadedFilesIdentificacion = [];
 let map = null;
 let marker = null;
 let formData = {
@@ -19,7 +20,10 @@ let formData = {
     esRepresentante: false,
     razonSocial: '',
     nombreRepresentante: '',
+    idTipoDenuncia: '',
     tipoDenuncia: '',
+    idTemaDenuncia: '',
+    claveCvv: '',
     hechosDenunciados: '',
     latitude: null,
     longitude: null,
@@ -40,8 +44,12 @@ document.addEventListener('DOMContentLoaded', function () {
     // Load draft if exists
     loadDraft();
 
+    // Initialize character counter
+    updateCharCounter();
+
     // Setup file upload
     setupFileUpload();
+    setupFileUploadIdentificacion();
 
     // Initialize map when switching to step 2
     // Map will be initialized on first view of step 2
@@ -211,6 +219,27 @@ function validateCurrentStep() {
             return false;
         }
 
+        // Validar campos condicionales según el tipo de denuncia
+        if (tipoDenuncia === '7') {
+            // Si es tipo 7, validar centro de verificación
+            const claveCvv = document.getElementById('centroVerificacion').value;
+            if (!claveCvv) {
+                alert('Por favor seleccione un centro de verificación vehicular');
+                return false;
+            }
+            formData.claveCvv = claveCvv;
+            formData.idTemaDenuncia = ''; // Limpiar tema si es tipo 7
+        } else {
+            // Para otros tipos, validar tema de denuncia
+            const temaDenuncia = document.getElementById('temaDenuncia').value;
+            if (!temaDenuncia) {
+                alert('Por favor seleccione un tema de denuncia');
+                return false;
+            }
+            formData.idTemaDenuncia = temaDenuncia;
+            formData.claveCvv = ''; // Limpiar centro si no es tipo 7
+        }
+
         // Validar ubicación
         if (!formData.latitude || !formData.longitude) {
             alert('Por favor seleccione una ubicación en el mapa');
@@ -218,7 +247,10 @@ function validateCurrentStep() {
         }
 
         // Guardar datos en formData
-        formData.tipoDenuncia = tipoDenuncia;
+        formData.idTipoDenuncia = tipoDenuncia;
+        // Obtener el texto del tipo de denuncia seleccionado
+        const tipoDenunciaSelect = document.getElementById('tipoDenuncia');
+        formData.tipoDenuncia = tipoDenunciaSelect.options[tipoDenunciaSelect.selectedIndex].text;
         formData.hechosDenunciados = hechosDenunciados;
     } else if (currentStep === 3) {
         // Validar campos del denunciado
@@ -398,6 +430,33 @@ function setupFileUpload() {
     });
 }
 
+function setupFileUploadIdentificacion() {
+    const dropZone = document.getElementById('dropZoneIdentificacion');
+    const fileInput = document.getElementById('fileInputIdentificacion');
+
+    // Drag and drop
+    dropZone.addEventListener('dragover', function (e) {
+        e.preventDefault();
+        dropZone.classList.add('bg-surface-container');
+    });
+
+    dropZone.addEventListener('dragleave', function (e) {
+        e.preventDefault();
+        dropZone.classList.remove('bg-surface-container');
+    });
+
+    dropZone.addEventListener('drop', function (e) {
+        e.preventDefault();
+        dropZone.classList.remove('bg-surface-container');
+        handleFilesIdentificacion(e.dataTransfer.files);
+    });
+
+    // File input change
+    fileInput.addEventListener('change', function (e) {
+        handleFilesIdentificacion(e.target.files);
+    });
+}
+
 function handleFiles(files) {
     const maxSize = 25 * 1024 * 1024; // 25MB
     const allowedTypes = ['image/png', 'image/jpeg', 'image/jpg', 'application/pdf'];
@@ -418,6 +477,36 @@ function handleFiles(files) {
     });
 
     formData.files = uploadedFiles;
+}
+
+function handleFilesIdentificacion(files) {
+    const maxSize = 10 * 1024 * 1024; // 10MB
+    const allowedTypes = ['image/png', 'image/jpeg', 'image/jpg', 'application/pdf'];
+
+    // Solo permitir un archivo de identificación
+    if (uploadedFilesIdentificacion.length >= 1) {
+        alert('Solo puede subir un documento de identificación. Elimine el anterior si desea cambiarlo.');
+        return;
+    }
+
+    Array.from(files).forEach(file => {
+        if (uploadedFilesIdentificacion.length >= 1) {
+            return;
+        }
+
+        if (file.size > maxSize) {
+            alert(`${file.name} es demasiado grande. El tamaño máximo es 10MB.`);
+            return;
+        }
+
+        if (!allowedTypes.includes(file.type)) {
+            alert(`${file.name} no es un formato soportado. Por favor suba PNG, JPG, o PDF.`);
+            return;
+        }
+
+        uploadedFilesIdentificacion.push(file);
+        displayFilePreviewIdentificacion(file);
+    });
 }
 
 function displayFilePreview(file) {
@@ -442,6 +531,37 @@ function displayFilePreview(file) {
     removeBtn.onclick = function () {
         uploadedFiles = uploadedFiles.filter(f => f !== file);
         formData.files = uploadedFiles;
+        fileDiv.remove();
+    };
+    fileDiv.appendChild(removeBtn);
+
+    preview.appendChild(fileDiv);
+}
+
+function displayFilePreviewIdentificacion(file) {
+    const preview = document.getElementById('filePreviewIdentificacion');
+    const fileDiv = document.createElement('div');
+    fileDiv.className = 'file-preview relative';
+
+    if (file.type.startsWith('image/')) {
+        const img = document.createElement('img');
+        img.src = URL.createObjectURL(file);
+        img.alt = file.name;
+        img.className = 'w-32 h-32 object-cover rounded-lg border-2 border-primary';
+        fileDiv.appendChild(img);
+    } else {
+        const pdfIcon = document.createElement('div');
+        pdfIcon.className = 'w-32 h-32 bg-surface-container rounded-lg flex flex-col items-center justify-center border-2 border-primary';
+        pdfIcon.innerHTML = '<span class="material-symbols-outlined text-4xl text-primary">picture_as_pdf</span><span class="text-xs text-secondary mt-2">' + file.name + '</span>';
+        fileDiv.appendChild(pdfIcon);
+    }
+
+    const removeBtn = document.createElement('button');
+    removeBtn.className = 'absolute -top-2 -right-2 w-8 h-8 bg-error text-white rounded-full flex items-center justify-center hover:bg-error/80 transition-colors';
+    removeBtn.innerHTML = '<span class="material-symbols-outlined text-sm">close</span>';
+    removeBtn.type = 'button';
+    removeBtn.onclick = function () {
+        uploadedFilesIdentificacion = uploadedFilesIdentificacion.filter(f => f !== file);
         fileDiv.remove();
     };
     fileDiv.appendChild(removeBtn);
@@ -499,8 +619,10 @@ function submitForm(event) {
     fd.append('razon_social',         formData.razonSocial         || '');
     fd.append('nombre_representante', formData.nombreRepresentante || '');
 
-    // Paso 2 �?" Denuncia y ubicación
-    fd.append('tipo_denuncia',      formData.tipoDenuncia);
+    // Paso 2 �?" Denuncia y ubicación    
+    fd.append('id_tipo_denuncia',   formData.idTipoDenuncia);
+    fd.append('id_tema_denuncia',   formData.idTemaDenuncia || '');
+    fd.append('clave_cvv',          formData.claveCvv || '');    fd.append('tipo_denuncia',      formData.tipoDenuncia);
     fd.append('hechos_denunciados', formData.hechosDenunciados);
     fd.append('latitud',            formData.latitude  ?? '');
     fd.append('longitud',           formData.longitude ?? '');
@@ -519,6 +641,11 @@ function submitForm(event) {
     // Archivos de evidencia
     uploadedFiles.forEach(function (file) {
         fd.append('evidencias[]', file, file.name);
+    });
+
+    // Archivos de identificación
+    uploadedFilesIdentificacion.forEach(function (file) {
+        fd.append('identificacion[]', file, file.name);
     });
 
     // Prevenir doble envío
@@ -544,7 +671,9 @@ function submitForm(event) {
                 // Resetear formulario
                 document.getElementById('complaintForm').reset();
                 uploadedFiles = [];
+                uploadedFilesIdentificacion = [];
                 document.getElementById('filePreview').innerHTML                 = '';
+                document.getElementById('filePreviewIdentificacion').innerHTML   = '';
                 document.getElementById('legalRepFields').style.display          = 'none';
                 document.getElementById('denunciadoMoralFields').style.display   = 'none';
 
@@ -651,6 +780,7 @@ function loadDraft() {
             // Cargar datos de la denuncia
             document.getElementById('tipoDenuncia').value = data.tipoDenuncia || '';
             document.getElementById('hechosDenunciados').value = data.hechosDenunciados || '';
+            updateCharCounter(); // Update character counter after loading draft
 
             // Cargar datos del denunciado
             document.getElementById('nombreDenunciado').value = data.nombreDenunciado || '';
@@ -688,6 +818,25 @@ function loadDraft() {
         } else {
             localStorage.removeItem('complaintDraft');
         }
+    }
+}
+
+// Character Counter for Hechos Denunciados
+function updateCharCounter() {
+    const textarea = document.getElementById('hechosDenunciados');
+    const counter = document.getElementById('charCounter');
+    const currentLength = textarea.value.length;
+    const maxLength = 1000;
+    
+    counter.textContent = `${currentLength}/${maxLength} caracteres`;
+    
+    // Change color as limit approaches
+    if (currentLength >= maxLength * 0.9) {
+        counter.classList.add('text-error');
+        counter.classList.remove('text-secondary');
+    } else {
+        counter.classList.add('text-secondary');
+        counter.classList.remove('text-error');
     }
 }
 

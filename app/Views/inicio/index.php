@@ -180,6 +180,28 @@
                                 </div>
                             </div>
 
+                            <!-- Documentos de Identificación -->
+                            <div class="space-y-6">
+                                <div class="space-y-1">
+                                    <h3 class="font-headline font-bold text-lg text-primary">Documentos de Identificación</h3>
+                                    <p class="text-sm text-secondary">Suba una copia de su identificación oficial (INE, pasaporte, etc.)</p>
+                                </div>
+                                <div id="dropZoneIdentificacion"
+                                    class="border-2 border-dashed border-outline-variant/50 rounded-xl p-8 flex flex-col items-center justify-center gap-4 bg-surface-container-low/30 hover:bg-surface-container-low transition-colors cursor-pointer">
+                                    <span class="material-symbols-outlined text-3xl text-outline"
+                                        data-icon="badge">badge</span>
+                                    <div class="text-center">
+                                        <p class="font-bold text-primary">Arrastra y suelta tu identificación aquí</p>
+                                        <p class="text-xs text-secondary mt-1">PNG, JPG o PDF (MAX 10MB)</p>
+                                    </div>
+                                    <input type="file" id="fileInputIdentificacion" accept="image/*,.pdf" class="hidden" />
+                                    <button onclick="document.getElementById('fileInputIdentificacion').click()"
+                                        class="mt-2 px-6 py-2 bg-surface-container-highest text-primary font-bold text-xs rounded-lg hover:bg-outline-variant transition-colors"
+                                        type="button">Seleccionar Archivo</button>
+                                </div>
+                                <div id="filePreviewIdentificacion" class="flex flex-wrap gap-4 mt-4"></div>
+                            </div>
+
                             <!-- Representante Legal Checkbox -->
                             <div class="space-y-4 p-6 bg-surface-container-low/50 rounded-xl border border-outline-variant/20">
                                 <div class="flex items-center gap-3">
@@ -217,25 +239,46 @@
                             <div class="space-y-2">
                                 <label class="font-headline font-bold text-sm text-primary uppercase tracking-wider">Tipo de
                                     Denuncia</label>
-                                <select id="tipoDenuncia" required
+                                <select id="tipoDenuncia" name="id_tipo_denuncia" required onchange="cargarTemasDenuncia(this.value)"
                                     class="w-full bg-surface-container-low border-0 border-b-2 border-outline-variant/40 focus:border-primary focus:ring-0 py-3 text-on-surface font-body">
                                     <option value="">Seleccione el tipo de denuncia...</option>
-                                    <option value="Impacto Ambiental">Impacto Ambiental</option>
-                                    <option value="Residuos de Manejo Especial">Residuos de Manejo Especial</option>
-                                    <option value="Contaminación Atmosférica">Contaminación Atmosférica</option>
-                                    <option value="Contaminación Auditiva">Contaminación Auditiva</option>
-                                    <option value="Contaminación Visual">Contaminación Visual</option>
-                                    <option value="Ordenamiento Territorial">Ordenamiento Territorial</option>
+                                    <?php if (isset($tiposDenuncia) && !empty($tiposDenuncia)): ?>
+                                        <?php foreach ($tiposDenuncia as $tipo): ?>
+                                            <option value="<?= esc($tipo['id_tipo_denuncia']) ?>"><?= esc($tipo['nombre']) ?></option>
+                                        <?php endforeach; ?>
+                                    <?php endif; ?>
+                                </select>
+                            </div>
+
+                            <!-- Tema de Denuncia (dinámico) -->
+                            <div id="temaDenunciaContainer" class="space-y-2" style="display: none;">
+                                <label class="font-headline font-bold text-sm text-primary uppercase tracking-wider">Tema Específico</label>
+                                <select id="temaDenuncia" name="id_tema_denuncia"
+                                    class="w-full bg-surface-container-low border-0 border-b-2 border-outline-variant/40 focus:border-primary focus:ring-0 py-3 text-on-surface font-body">
+                                    <option value="">Seleccione el tema...</option>
+                                </select>
+                            </div>
+
+                            <!-- Centro de Verificación Vehicular (solo para tipo 7) -->
+                            <div id="centroVerificacionContainer" class="space-y-2" style="display: none;">
+                                <label class="font-headline font-bold text-sm text-primary uppercase tracking-wider">Centro de Verificación Vehicular</label>
+                                <select id="centroVerificacion" name="clave_cvv"
+                                    class="w-full bg-surface-container-low border-0 border-b-2 border-outline-variant/40 focus:border-primary focus:ring-0 py-3 text-on-surface font-body">
+                                    <option value="">Seleccione el centro de verificación...</option>
                                 </select>
                             </div>
 
                             <!-- Hechos Denunciados -->
                             <div class="space-y-2">
-                                <label class="font-headline font-bold text-sm text-primary uppercase tracking-wider">Hechos
-                                    Denunciados</label>
-                                <textarea id="hechosDenunciados" required
+                                <div class="flex justify-between items-center">
+                                    <label class="font-headline font-bold text-sm text-primary uppercase tracking-wider">Hechos
+                                        Denunciados</label>
+                                    <span id="charCounter" class="text-xs font-medium text-secondary">0/1000 caracteres</span>
+                                </div>
+                                <textarea id="hechosDenunciados" required maxlength="1000"
                                     class="w-full bg-surface-container-low border-0 border-b-2 border-outline-variant/40 focus:border-primary focus:ring-0 py-3 text-on-surface font-body resize-none"
-                                    placeholder="Relate los hechos a detalle o descripción..." rows="6"></textarea>
+                                    placeholder="Relate los hechos a detalle o descripción..." rows="6"
+                                    oninput="updateCharCounter()"></textarea>
                                 <p class="text-xs text-secondary mt-1">Proporcione una descripción detallada de los hechos observados
                                     incluyendo fechas, personas involucradas y cualquier evidencia relevante.</p>
                             </div>
@@ -535,3 +578,144 @@
             </div>
         </div>
     </div>
+
+    <!-- Modal de Información Legal -->
+    <div id="legalInfoModal" class="modal-overlay" style="display: flex;" onclick="closeLegalModalOnOverlay(event)">
+        <div class="modal-content max-w-3xl" onclick="event.stopPropagation()">
+            <div class="flex justify-between items-start mb-6">
+                <div class="flex items-center gap-4">
+                    <div class="w-14 h-14 bg-primary/10 rounded-full flex items-center justify-center">
+                        <span class="material-symbols-outlined text-primary text-3xl" data-icon="gavel">gavel</span>
+                    </div>
+                    <div>
+                        <h2 class="font-headline font-bold text-2xl text-primary">Derecho a un Medio Ambiente Adecuado</h2>
+                        <p class="text-sm text-secondary">Marco Legal de Denuncias Ambientales</p>
+                    </div>
+                </div>
+                <button onclick="closeLegalModal()" class="text-secondary hover:text-primary transition-colors">
+                    <span class="material-symbols-outlined text-3xl">close</span>
+                </button>
+            </div>
+
+            <div class="space-y-6">
+                <div class="bg-surface-container-low/50 rounded-xl p-6 border-l-4 border-primary">
+                    <div class="flex items-start gap-3 mb-4">
+                        <span class="material-symbols-outlined text-primary text-xl flex-shrink-0 mt-1" data-icon="article">article</span>
+                        <div class="text-sm text-on-surface leading-relaxed space-y-4">
+                            <p>
+                                Toda persona tiene derecho a un medio ambiente adecuado para su desarrollo, salud y bienestar. El Estado y los Municipios promoverán y garantizarán, en sus respectivos ámbitos de competencia, mejorar la calidad de vida y la productividad de las personas, a través de la protección al ambiente y la preservación, restauración y mejoramiento del equilibrio ecológico, de manera que no se comprometa la satisfacción de las necesidades de las generaciones futuras.
+                            </p>
+                            <p>
+                                Toda persona, grupos sociales, organizaciones no gubernamentales, asociaciones y sociedades podrán denunciar ante la Secretaría u otras autoridades competentes todo acto u omisión que produzca o pueda producir desequilibrio ecológico o daños al ambiente o a los recursos naturales, o contravenga las disposiciones de la presente Ley, y de los demás ordenamientos que regulen las materias relacionadas con la protección al ambiente natural y la preservación y restauración del equilibrio ecológico.
+                            </p>
+                            <p>
+                                Si la denuncia fuera presentada ante la autoridad estatal o municipal y resulta del orden federal, deberá ser remitida de manera inmediata para su atención y trámite a la Procuraduría Federal de Protección al Ambiente.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-tertiary-fixed/10 rounded-xl p-6 border border-tertiary-fixed/30">
+                    <div class="flex items-center gap-3 mb-3">
+                        <span class="material-symbols-outlined text-tertiary-fixed text-xl" data-icon="info" style="font-variation-settings: 'FILL' 1;">info</span>
+                        <h4 class="font-headline font-bold text-primary">Importante</h4>
+                    </div>
+                    <p class="text-sm text-on-surface-variant leading-relaxed">
+                        Este sistema garantiza la confidencialidad de su información y facilita el seguimiento de su denuncia mediante un folio único. Sus datos personales son tratados conforme a la legislación aplicable en materia de protección de datos.
+                    </p>
+                </div>
+
+                <div class="flex gap-4">
+                    <button onclick="closeLegalModal()" class="flex-1 primary-gradient text-white px-6 py-4 rounded-lg font-headline font-bold text-sm tracking-widest uppercase shadow-xl hover:shadow-primary/20 transition-all">
+                        Entendido, Continuar
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Mostrar el modal de información legal al cargar la página
+        window.addEventListener('DOMContentLoaded', function() {
+            // Verificar si el usuario ya vio el modal en esta sesión
+            if (!sessionStorage.getItem('legalInfoShown')) {
+                document.getElementById('legalInfoModal').style.display = 'flex';
+                sessionStorage.setItem('legalInfoShown', 'true');
+            }
+        });
+
+        // Funciones para cerrar el modal legal
+        function closeLegalModal() {
+            document.getElementById('legalInfoModal').style.display = 'none';
+        }
+
+        function closeLegalModalOnOverlay(event) {
+            if (event.target.id === 'legalInfoModal') {
+                closeLegalModal();
+            }
+        }
+
+        // ─── Funciones para cargar dinámicamente temas y centros ───────────────────────
+        async function cargarTemasDenuncia(idTipoDenuncia) {
+            const temaDenunciaContainer = document.getElementById('temaDenunciaContainer');
+            const temaDenunciaSelect = document.getElementById('temaDenuncia');
+            const centroVerificacionContainer = document.getElementById('centroVerificacionContainer');
+            const centroVerificacionSelect = document.getElementById('centroVerificacion');
+
+            // Limpiar selects
+            temaDenunciaSelect.innerHTML = '<option value="">Seleccione el tema...</option>';
+            centroVerificacionSelect.innerHTML = '<option value="">Seleccione el centro de verificación...</option>';
+            
+            // Ocultar ambos contenedores inicialmente
+            temaDenunciaContainer.style.display = 'none';
+            centroVerificacionContainer.style.display = 'none';
+            
+            // Remover requerido de ambos campos
+            temaDenunciaSelect.removeAttribute('required');
+            centroVerificacionSelect.removeAttribute('required');
+
+            if (!idTipoDenuncia) {
+                return;
+            }
+
+            // Si es tipo 7 (Centros de verificación vehicular), cargar centros
+            if (idTipoDenuncia === '7') {
+                try {
+                    const response = await fetch('<?= base_url('inicio/getCentrosVerificacion') ?>');
+                    const result = await response.json();
+                    
+                    if (result.success && result.data.length > 0) {
+                        result.data.forEach(centro => {
+                            const option = document.createElement('option');
+                            option.value = centro.clave;
+                            option.textContent = `${centro.clave} - ${centro.municipio} - ${centro.direccion}`;
+                            centroVerificacionSelect.appendChild(option);
+                        });
+                        centroVerificacionContainer.style.display = 'block';
+                        centroVerificacionSelect.setAttribute('required', 'required');
+                    }
+                } catch (error) {
+                    console.error('Error al cargar centros de verificación:', error);
+                }
+            } else {
+                // Para otros tipos, cargar temas
+                try {
+                    const response = await fetch(`<?= base_url('inicio/getTemasPorTipo') ?>?id_tipo=${idTipoDenuncia}`);
+                    const result = await response.json();
+                    
+                    if (result.success && result.data.length > 0) {
+                        result.data.forEach(tema => {
+                            const option = document.createElement('option');
+                            option.value = tema.id_tema_denuncia;
+                            option.textContent = tema.nombre;
+                            temaDenunciaSelect.appendChild(option);
+                        });
+                        temaDenunciaContainer.style.display = 'block';
+                        temaDenunciaSelect.setAttribute('required', 'required');
+                    }
+                } catch (error) {
+                    console.error('Error al cargar temas de denuncia:', error);
+                }
+            }
+        }
+    </script>
