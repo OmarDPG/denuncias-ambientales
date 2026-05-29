@@ -1,11 +1,10 @@
+    /* Smooth fade-in on page load */
     body {
-      visibility: hidden;
       opacity: 0;
       transition: opacity 0.3s ease-in;
     }
 
     body.loaded {
-      visibility: visible;
       opacity: 1;
     }
 
@@ -180,7 +179,17 @@
       background: #f7f9fb;
       border-radius: 1rem;
       padding: 2rem;
-      max-width: 500px;
+      max-width: 50%;
+      width: 90%;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+      position: relative;
+      animation: slideUp 0.3s ease-out;
+    }
+    .modal-content-verificacion {
+      background: #f7f9fb;
+      border-radius: 1rem;
+      padding: 2rem;
+      max-width: 30% !important;
       width: 90%;
       box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
       position: relative;

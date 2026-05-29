@@ -810,7 +810,7 @@
 
     <!-- Modal de Verificación OTP -->
     <div id="verificacionModal" class="modal-overlay" style="display: none;" onclick="cerrarModalVerificacionOnOverlay(event)">
-        <div class="modal-content max-w-md" onclick="event.stopPropagation()">
+        <div class="modal-content-verificacion modal-content max-w-md" onclick="event.stopPropagation()">
             <!-- Header -->
             <div class="flex items-center gap-4 mb-6">
                 <div class="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center">

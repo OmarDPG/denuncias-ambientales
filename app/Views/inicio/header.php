@@ -8,6 +8,7 @@
     <title>Denuncias Ambientales - Sistema de Atención</title>
 
     <!-- Stylesheets -->
+    <link rel="stylesheet" href="<?= base_url('styles/tailwind.css') ?>" />
     <link rel="stylesheet" href="<?= base_url('styles/styles.css') ?>" />
     <link
         href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;700;800&amp;family=Inter:wght@400;500;600&amp;display=swap"
@@ -21,78 +22,8 @@
     <meta name="base-url" content="<?= base_url() ?>">
 
     <!-- Scripts -->
-    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
         integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
-    <script id="tailwind-config">
-        tailwind.config = {
-            darkMode: "class",
-            theme: {
-                extend: {
-                    colors: {
-                        "on-error": "#ffffff",
-                        "surface-container-low": "#f2f4f6",
-                        "error": "#ba1a1a",
-                        "secondary-fixed": "#d5e3fc",
-                        "error-container": "#ffdad6",
-                        "on-secondary-container": "#57657a",
-                        "secondary-fixed-dim": "#b9c7df",
-                        "surface-container-lowest": "#ffffff",
-                        "inverse-on-surface": "#eff1f3",
-                        "on-primary-fixed": "#002114",
-                        "on-primary": "#ffffff",
-                        "on-surface-variant": "#414844",
-                        "surface-container-highest": "#e0e3e5",
-                        "outline-variant": "#c1c8c2",
-                        "outline": "#717973",
-                        "primary-fixed-dim": "#a5d0b9",
-                        "on-primary-container": "#86af99",
-                        "inverse-primary": "#a5d0b9",
-                        "secondary": "#515f74",
-                        "on-secondary": "#ffffff",
-                        "secondary-container": "#d5e3fc",
-                        "tertiary": "#002d1c",
-                        "surface": "#f7f9fb",
-                        "on-secondary-fixed": "#0d1c2e",
-                        "surface-container": "#eceef0",
-                        "tertiary-fixed": "#b1f0ce",
-                        "surface-container-high": "#e6e8ea",
-                        "inverse-surface": "#2d3133",
-                        "primary-container": "#1b4332",
-                        "on-surface": "#191c1e",
-                        "on-primary-fixed-variant": "#274e3d",
-                        "surface-bright": "#f7f9fb",
-                        "on-tertiary-container": "#75b393",
-                        "on-tertiary": "#ffffff",
-                        "surface-tint": "#3f6653",
-                        "tertiary-container": "#00452e",
-                        "on-tertiary-fixed-variant": "#0e5138",
-                        "on-tertiary-fixed": "#002114",
-                        "primary": "#012d1d",
-                        "background": "#f7f9fb",
-                        "primary-fixed": "#c1ecd4",
-                        "on-background": "#191c1e",
-                        "surface-variant": "#e0e3e5",
-                        "on-secondary-fixed-variant": "#3a485b",
-                        "tertiary-fixed-dim": "#95d4b3",
-                        "surface-dim": "#d8dadc",
-                        "on-error-container": "#93000a"
-                    },
-                    fontFamily: {
-                        "headline": ["Manrope"],
-                        "body": ["Inter"],
-                        "label": ["Inter"]
-                    },
-                    borderRadius: {
-                        "DEFAULT": "0.125rem",
-                        "lg": "0.25rem",
-                        "xl": "0.5rem",
-                        "full": "0.75rem"
-                    },
-                },
-            },
-        }
-    </script>
 </head>
 
 <body class="bg-surface font-body text-on-surface flex flex-col min-h-screen">

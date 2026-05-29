@@ -127,3 +127,18 @@ nb-configuration.xml
 /.phpunit.*.cache
 
 *.sql
+*.md
+
+#-------------------------
+# Node.js / NPM
+#-------------------------
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+package-lock.json
+yarn.lock
+
+# Keep compiled CSS in repo for easy deployment
+# Uncomment if you prefer to build on server:
+# /public/styles/tailwind.css
