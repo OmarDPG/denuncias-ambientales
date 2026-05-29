@@ -442,10 +442,10 @@
                                 type="button">
                                 Siguiente Paso
                             </button>
-                            <button id="submitBtn" onclick="submitForm(event)" style="display: none;"
+                            <button id="submitBtn" onclick="showPreviewModal()" style="display: none;"
                                 class="primary-gradient text-white px-10 py-4 rounded-lg font-headline font-extrabold text-sm tracking-widest uppercase shadow-xl hover:shadow-primary/20 transition-all"
-                                type="submit">
-                                Formalizar Envío
+                                type="button">
+                                Verificar Datos
                             </button>
                         </div>
                     </form>
@@ -579,6 +579,180 @@
         </div>
     </div>
 
+    <!-- Modal de Previsualización de Denuncia -->
+    <div id="previewModal" class="modal-overlay" onclick="closePreviewModalOnOverlay(event)">
+        <div class="modal-content max-w-5xl" onclick="event.stopPropagation()">
+            <!-- Header -->
+            <div class="flex justify-between items-start mb-6">
+                <div class="flex items-center gap-4">
+                    <div class="w-14 h-14 bg-primary/10 rounded-full flex items-center justify-center">
+                        <span class="material-symbols-outlined text-primary text-3xl" data-icon="fact_check">fact_check</span>
+                    </div>
+                    <div>
+                        <h2 class="font-headline font-bold text-2xl text-primary">Revisión de Denuncia</h2>
+                        <p class="text-sm text-secondary">Verifique que toda la información sea correcta antes de enviar</p>
+                    </div>
+                </div>
+                <button onclick="closePreviewModal()" class="text-secondary hover:text-primary transition-colors">
+                    <span class="material-symbols-outlined text-3xl">close</span>
+                </button>
+            </div>
+
+            <!-- Contenido scrolleable -->
+            <div class="max-h-[70vh] overflow-y-auto space-y-6 pr-2">
+                <!-- Sección 1: Datos del Denunciante -->
+                <div class="bg-surface-container-low rounded-xl p-6 space-y-4">
+                    <div class="flex items-center gap-3 mb-4">
+                        <span class="material-symbols-outlined text-primary text-2xl" data-icon="person">person</span>
+                        <h3 class="font-headline font-bold text-xl text-primary">Datos del Denunciante</h3>
+                    </div>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <p class="text-xs text-secondary uppercase tracking-wider">Tipo de Persona</p>
+                            <p id="prev_tipoPersona" class="font-medium text-on-surface"></p>
+                        </div>
+                        <div>
+                            <p class="text-xs text-secondary uppercase tracking-wider">Nombre Completo</p>
+                            <p id="prev_nombreCompleto" class="font-medium text-on-surface"></p>
+                        </div>
+                        <div>
+                            <p class="text-xs text-secondary uppercase tracking-wider">Género</p>
+                            <p id="prev_genero" class="font-medium text-on-surface"></p>
+                        </div>
+                        <div>
+                            <p class="text-xs text-secondary uppercase tracking-wider">Email</p>
+                            <p id="prev_email" class="font-medium text-on-surface"></p>
+                        </div>
+                        <div>
+                            <p class="text-xs text-secondary uppercase tracking-wider">Teléfono</p>
+                            <p id="prev_telefono" class="font-medium text-on-surface"></p>
+                        </div>
+                    </div>
+
+                    <div class="border-t border-outline-variant/20 pt-4">
+                        <p class="text-xs text-secondary uppercase tracking-wider mb-2">Dirección</p>
+                        <p id="prev_direccion" class="font-medium text-on-surface"></p>
+                    </div>
+
+                    <!-- Documento de Identificación -->
+                    <div id="prev_identificacionContainer" class="border-t border-outline-variant/20 pt-4" style="display: none;">
+                        <p class="text-xs text-secondary uppercase tracking-wider mb-2">Documento de Identificación</p>
+                        <div id="prev_identificacionFiles" class="flex flex-wrap gap-2"></div>
+                    </div>
+
+                    <!-- Representante Legal -->
+                    <div id="prev_representanteContainer" class="border-t border-outline-variant/20 pt-4" style="display: none;">
+                        <p class="text-xs text-secondary uppercase tracking-wider mb-2">Representante Legal</p>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <p class="text-xs text-secondary">Razón Social</p>
+                                <p id="prev_razonSocial" class="font-medium text-on-surface"></p>
+                            </div>
+                            <div>
+                                <p class="text-xs text-secondary">Nombre del Representante</p>
+                                <p id="prev_nombreRepresentante" class="font-medium text-on-surface"></p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Sección 2: Datos de la Denuncia -->
+                <div class="bg-surface-container-low rounded-xl p-6 space-y-4">
+                    <div class="flex items-center gap-3 mb-4">
+                        <span class="material-symbols-outlined text-primary text-2xl" data-icon="description">description</span>
+                        <h3 class="font-headline font-bold text-xl text-primary">Datos de la Denuncia</h3>
+                    </div>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <p class="text-xs text-secondary uppercase tracking-wider">Tipo de Denuncia</p>
+                            <p id="prev_tipoDenuncia" class="font-medium text-on-surface"></p>
+                        </div>
+                        <div id="prev_temaContainer" style="display: none;">
+                            <p class="text-xs text-secondary uppercase tracking-wider">Tema Específico</p>
+                            <p id="prev_temaDenuncia" class="font-medium text-on-surface"></p>
+                        </div>
+                        <div id="prev_cvvContainer" style="display: none;">
+                            <p class="text-xs text-secondary uppercase tracking-wider">Centro de Verificación</p>
+                            <p id="prev_centroVerificacion" class="font-medium text-on-surface"></p>
+                        </div>
+                    </div>
+
+                    <div class="border-t border-outline-variant/20 pt-4">
+                        <p class="text-xs text-secondary uppercase tracking-wider mb-2">Hechos Denunciados</p>
+                        <p id="prev_hechosDenunciados" class="text-sm text-on-surface leading-relaxed whitespace-pre-wrap"></p>
+                    </div>
+
+                    <div class="border-t border-outline-variant/20 pt-4">
+                        <p class="text-xs text-secondary uppercase tracking-wider mb-2">Ubicación</p>
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <p class="text-xs text-secondary">Latitud</p>
+                                <p id="prev_latitud" class="font-medium text-on-surface"></p>
+                            </div>
+                            <div>
+                                <p class="text-xs text-secondary">Longitud</p>
+                                <p id="prev_longitud" class="font-medium text-on-surface"></p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Sección 3: Datos del Denunciado -->
+                <div class="bg-surface-container-low rounded-xl p-6 space-y-4">
+                    <div class="flex items-center gap-3 mb-4">
+                        <span class="material-symbols-outlined text-primary text-2xl" data-icon="gavel">gavel</span>
+                        <h3 class="font-headline font-bold text-xl text-primary">Datos del Denunciado</h3>
+                    </div>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <p class="text-xs text-secondary uppercase tracking-wider">Nombre / Razón Social</p>
+                            <p id="prev_nombreDenunciado" class="font-medium text-on-surface"></p>
+                        </div>
+                        <div id="prev_denunciadoMoralContainer" style="display: none;">
+                            <p class="text-xs text-secondary uppercase tracking-wider">Razón Social</p>
+                            <p id="prev_razonSocialDenunciado" class="font-medium text-on-surface"></p>
+                        </div>
+                    </div>
+
+                    <div class="border-t border-outline-variant/20 pt-4">
+                        <p class="text-xs text-secondary uppercase tracking-wider mb-2">Dirección del Denunciado</p>
+                        <p id="prev_direccionDenunciado" class="font-medium text-on-surface"></p>
+                    </div>
+                </div>
+
+                <!-- Sección 4: Evidencias -->
+                <div id="prev_evidenciasContainer" class="bg-surface-container-low rounded-xl p-6 space-y-4" style="display: none;">
+                    <div class="flex items-center gap-3 mb-4">
+                        <span class="material-symbols-outlined text-primary text-2xl" data-icon="photo_library">photo_library</span>
+                        <h3 class="font-headline font-bold text-xl text-primary">Archivos de Evidencia</h3>
+                    </div>
+                    <div id="prev_evidenciasFiles" class="flex flex-wrap gap-3"></div>
+                </div>
+            </div>
+
+            <!-- Footer con botones -->
+            <div class="flex flex-col md:flex-row gap-4 mt-6 pt-6 border-t border-outline-variant/20">
+                <button onclick="editFormData()" 
+                    class="flex-1 text-primary border-2 border-primary px-6 py-4 rounded-lg font-headline font-bold text-sm tracking-widest uppercase hover:bg-primary hover:text-white transition-all">
+                    <span class="flex items-center justify-center gap-2">
+                        <span class="material-symbols-outlined" data-icon="edit">edit</span>
+                        Corregir Datos
+                    </span>
+                </button>
+                <button onclick="confirmAndSubmit()" id="confirmSubmitBtn"
+                    class="flex-1 primary-gradient text-white px-6 py-4 rounded-lg font-headline font-bold text-sm tracking-widest uppercase shadow-xl hover:shadow-primary/20 transition-all">
+                    <span class="flex items-center justify-center gap-2">
+                        <span class="material-symbols-outlined" data-icon="send">send</span>
+                        Confirmar y Enviar
+                    </span>
+                </button>
+            </div>
+        </div>
+    </div>
+
     <!-- Modal de Información Legal -->
     <div id="legalInfoModal" class="modal-overlay" style="display: flex;" onclick="closeLegalModalOnOverlay(event)">
         <div class="modal-content max-w-3xl" onclick="event.stopPropagation()">
@@ -629,6 +803,99 @@
                     <button onclick="closeLegalModal()" class="flex-1 primary-gradient text-white px-6 py-4 rounded-lg font-headline font-bold text-sm tracking-widest uppercase shadow-xl hover:shadow-primary/20 transition-all">
                         Entendido, Continuar
                     </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Verificación OTP -->
+    <div id="verificacionModal" class="modal-overlay" style="display: none;" onclick="cerrarModalVerificacionOnOverlay(event)">
+        <div class="modal-content max-w-md" onclick="event.stopPropagation()">
+            <!-- Header -->
+            <div class="flex items-center gap-4 mb-6">
+                <div class="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center">
+                    <span class="material-symbols-outlined text-primary text-4xl">
+                        mark_email_read
+                    </span>
+                </div>
+                <div>
+                    <h2 class="font-headline font-bold text-2xl text-primary">
+                        Verifica tu Email
+                    </h2>
+                    <p class="text-sm text-secondary mt-1">
+                        Folio: <span id="folioVerificacion" class="font-bold text-primary">-</span>
+                    </p>
+                </div>
+            </div>
+
+            <!-- Instrucciones -->
+            <div class="bg-surface-container-low rounded-xl p-4 mb-6 border-l-4 border-primary">
+                <p class="text-sm text-secondary leading-relaxed">
+                    Hemos enviado un <strong>código de verificación de 6 dígitos</strong> 
+                    a tu correo electrónico. Por favor ingrésalo a continuación para 
+                    confirmar tu denuncia.
+                </p>
+                <p class="text-xs text-secondary mt-2 opacity-75 flex items-center gap-1">
+                    <span class="material-symbols-outlined text-sm">schedule</span>
+                    El código expira en 30 minutos
+                </p>
+            </div>
+
+            <!-- Input de Código -->
+            <div class="space-y-4">
+                <div class="space-y-2">
+                    <label class="font-headline font-bold text-sm text-primary uppercase tracking-wider flex items-center gap-2">
+                        <span class="material-symbols-outlined text-lg">pin</span>
+                        Código de Verificación
+                    </label>
+                    <input 
+                        id="codigoOTP" 
+                        type="text" 
+                        inputmode="numeric"
+                        pattern="[0-9]*"
+                        maxlength="6"
+                        placeholder="000000"
+                        class="w-full px-6 py-4 text-center text-3xl font-bold tracking-[0.5em] border-2 border-outline-variant/30 rounded-lg focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all"
+                        autocomplete="off"
+                    />
+                </div>
+
+                <!-- Mensaje de Error -->
+                <div id="errorVerificacion" 
+                     class="bg-error-container/20 border-l-4 border-error rounded-lg p-4 text-sm text-error flex items-start gap-3"
+                     style="display: none;">
+                    <span class="material-symbols-outlined text-xl">error</span>
+                    <span id="errorVerificacionTexto" class="flex-1"></span>
+                </div>
+
+                <!-- Botones -->
+                <div class="space-y-3 pt-2">
+                    <button 
+                        id="btnVerificar"
+                        onclick="verificarCodigoOTP()"
+                        class="w-full primary-gradient text-white px-6 py-4 rounded-lg font-headline font-bold text-sm tracking-widest uppercase shadow-xl hover:shadow-primary/20 transition-all flex items-center justify-center gap-2">
+                        <span class="material-symbols-outlined">verified</span>
+                        Verificar Código
+                    </button>
+
+                    <button 
+                        id="btnReenviar"
+                        onclick="reenviarCodigoOTP()"
+                        class="w-full text-primary border-2 border-primary px-6 py-3 rounded-lg font-headline font-bold text-sm tracking-widest uppercase hover:bg-primary hover:text-white transition-all flex items-center justify-center gap-2">
+                        <span class="material-symbols-outlined">mail</span>
+                        Reenviar Código
+                    </button>
+                </div>
+
+                <!-- Ayuda -->
+                <div class="text-center text-xs text-secondary mt-4 space-y-2">
+                    <p class="flex items-center justify-center gap-1">
+                        <span class="material-symbols-outlined text-sm">info</span>
+                        ¿No recibiste el código? Revisa tu carpeta de spam
+                    </p>
+                    <p class="opacity-75">
+                        El código solo se puede usar una vez y es válido por 30 minutos
+                    </p>
                 </div>
             </div>
         </div>

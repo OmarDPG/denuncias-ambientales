@@ -292,6 +292,260 @@ function validateCurrentStep() {
     return true;
 }
 
+// ─── Funciones del Modal de Previsualización ───────────────────────────────────
+function showPreviewModal() {
+    // Validar step 3 antes de mostrar el modal
+    if (!validateCurrentStep()) {
+        return;
+    }
+
+    // Recolectar todos los datos faltantes del step 3 si no están en formData
+    if (!formData.nombreDenunciado) {
+        formData.nombreDenunciado = document.getElementById('nombreDenunciado').value;
+        formData.denunciadoEsMoral = document.getElementById('denunciadoEsMoral').checked;
+        formData.municipioDenunciado = document.getElementById('municipioDenunciado').value;
+        formData.coloniaDenunciado = document.getElementById('coloniaDenunciado').value;
+        formData.calleDenunciado = document.getElementById('calleDenunciado').value;
+        formData.codigoPostalDenunciado = document.getElementById('codigoPostalDenunciado').value;
+        formData.numeroExteriorDenunciado = document.getElementById('numeroExteriorDenunciado').value;
+        formData.numeroInteriorDenunciado = document.getElementById('numeroInteriorDenunciado').value;
+        
+        if (formData.denunciadoEsMoral) {
+            formData.razonSocialDenunciado = document.getElementById('razonSocialDenunciado').value;
+        }
+    }
+
+    // Poblar el modal con los datos
+    populatePreviewModal();
+
+    // Mostrar el modal
+    document.getElementById('previewModal').style.display = 'flex';
+}
+
+function populatePreviewModal() {
+    // Sección 1: Datos del Denunciante
+    document.getElementById('prev_tipoPersona').textContent = formData.tipoPersona === 'fisica' ? 'Persona Física' : 'Persona Moral';
+    document.getElementById('prev_nombreCompleto').textContent = formData.nombreCompleto;
+    document.getElementById('prev_genero').textContent = formData.genero.charAt(0).toUpperCase() + formData.genero.slice(1);
+    document.getElementById('prev_email').textContent = formData.email;
+    document.getElementById('prev_telefono').textContent = formData.telefono;
+
+    // Dirección del denunciante
+    const direccion = `${formData.calle} ${formData.numeroExterior}${formData.numeroInterior ? ' Int. ' + formData.numeroInterior : ''}, Col. ${formData.colonia}, ${formData.municipio}, ${formData.estado}. CP: ${formData.codigoPostal}`;
+    document.getElementById('prev_direccion').textContent = direccion;
+
+    // Documentos de identificación
+    if (uploadedFilesIdentificacion.length > 0) {
+        document.getElementById('prev_identificacionContainer').style.display = 'block';
+        const container = document.getElementById('prev_identificacionFiles');
+        container.innerHTML = '';
+        uploadedFilesIdentificacion.forEach(file => {
+            const fileChip = document.createElement('div');
+            fileChip.className = 'flex items-center gap-2 bg-primary/10 px-3 py-1 rounded-full';
+            fileChip.innerHTML = `
+                <span class="material-symbols-outlined text-primary text-sm">badge</span>
+                <span class="text-xs text-primary font-medium">${file.name}</span>
+            `;
+            container.appendChild(fileChip);
+        });
+    }
+
+    // Representante Legal
+    if (formData.esRepresentante) {
+        document.getElementById('prev_representanteContainer').style.display = 'block';
+        document.getElementById('prev_razonSocial').textContent = formData.razonSocial;
+        document.getElementById('prev_nombreRepresentante').textContent = formData.nombreRepresentante;
+    } else {
+        document.getElementById('prev_representanteContainer').style.display = 'none';
+    }
+
+    // Sección 2: Datos de la Denuncia
+    document.getElementById('prev_tipoDenuncia').textContent = formData.tipoDenuncia;
+
+    // Tema o Centro de Verificación
+    if (formData.idTipoDenuncia === '7') {
+        document.getElementById('prev_temaContainer').style.display = 'none';
+        document.getElementById('prev_cvvContainer').style.display = 'block';
+        const cvvSelect = document.getElementById('centroVerificacion');
+        const cvvText = cvvSelect.options[cvvSelect.selectedIndex]?.text || 'N/A';
+        document.getElementById('prev_centroVerificacion').textContent = cvvText;
+    } else {
+        document.getElementById('prev_cvvContainer').style.display = 'none';
+        document.getElementById('prev_temaContainer').style.display = 'block';
+        const temaSelect = document.getElementById('temaDenuncia');
+        const temaText = temaSelect.options[temaSelect.selectedIndex]?.text || 'N/A';
+        document.getElementById('prev_temaDenuncia').textContent = temaText;
+    }
+
+    document.getElementById('prev_hechosDenunciados').textContent = formData.hechosDenunciados;
+    document.getElementById('prev_latitud').textContent = formData.latitude ? parseFloat(formData.latitude).toFixed(6) : 'N/A';
+    document.getElementById('prev_longitud').textContent = formData.longitude ? parseFloat(formData.longitude).toFixed(6) : 'N/A';
+
+    // Sección 3: Datos del Denunciado
+    document.getElementById('prev_nombreDenunciado').textContent = formData.nombreDenunciado;
+
+    if (formData.denunciadoEsMoral) {
+        document.getElementById('prev_denunciadoMoralContainer').style.display = 'block';
+        document.getElementById('prev_razonSocialDenunciado').textContent = formData.razonSocialDenunciado;
+    } else {
+        document.getElementById('prev_denunciadoMoralContainer').style.display = 'none';
+    }
+
+    // Dirección del denunciado
+    const direccionDenunciado = `${formData.calleDenunciado} ${formData.numeroExteriorDenunciado}${formData.numeroInteriorDenunciado ? ' Int. ' + formData.numeroInteriorDenunciado : ''}, Col. ${formData.coloniaDenunciado}, ${formData.municipioDenunciado}. CP: ${formData.codigoPostalDenunciado}`;
+    document.getElementById('prev_direccionDenunciado').textContent = direccionDenunciado;
+
+    // Sección 4: Evidencias
+    if (uploadedFiles.length > 0) {
+        document.getElementById('prev_evidenciasContainer').style.display = 'block';
+        const container = document.getElementById('prev_evidenciasFiles');
+        container.innerHTML = '';
+        
+        uploadedFiles.forEach(file => {
+            const fileItem = document.createElement('div');
+            fileItem.className = 'relative group';
+            
+            if (file.type.startsWith('image/')) {
+                const img = document.createElement('img');
+                img.src = URL.createObjectURL(file);
+                img.alt = file.name;
+                img.className = 'w-24 h-24 object-cover rounded-lg border-2 border-outline-variant';
+                fileItem.appendChild(img);
+            } else {
+                const pdfIcon = document.createElement('div');
+                pdfIcon.className = 'w-24 h-24 bg-surface-container rounded-lg flex flex-col items-center justify-center border-2 border-outline-variant';
+                pdfIcon.innerHTML = `
+                    <span class="material-symbols-outlined text-3xl text-primary">picture_as_pdf</span>
+                    <span class="text-xs text-secondary mt-1 text-center px-1">${file.name.substring(0, 10)}...</span>
+                `;
+                fileItem.appendChild(pdfIcon);
+            }
+            
+            container.appendChild(fileItem);
+        });
+    } else {
+        document.getElementById('prev_evidenciasContainer').style.display = 'none';
+    }
+}
+
+function closePreviewModal() {
+    document.getElementById('previewModal').style.display = 'none';
+}
+
+function closePreviewModalOnOverlay(event) {
+    if (event.target.id === 'previewModal') {
+        closePreviewModal();
+    }
+}
+
+function editFormData() {
+    // Cerrar el modal
+    closePreviewModal();
+    
+    // Los datos ya están en los campos del formulario y en formData
+    // El usuario puede navegar entre los steps para editar
+    
+    // Opcionalmente, regresar al step 1
+    currentStep = 1;
+    updateSteps();
+}
+
+function confirmAndSubmit() {
+    // Deshabilitar botón para prevenir doble clic
+    const confirmBtn = document.getElementById('confirmSubmitBtn');
+    confirmBtn.disabled = true;
+    confirmBtn.innerHTML = '<span class="flex items-center justify-center gap-2"><span class="material-symbols-outlined animate-spin">progress_activity</span>Enviando...</span>';
+
+    // Construir FormData con todos los campos recolectados
+    const fd = new FormData();
+
+    // Agregar token CSRF
+    fd.append('csrf_test_name', getCsrfToken());
+
+    // Paso 1 – Denunciante
+    fd.append('tipo_persona',         formData.tipoPersona);
+    fd.append('nombre_completo',      formData.nombreCompleto);
+    fd.append('genero',               formData.genero);
+    fd.append('estado',               formData.estado);
+    fd.append('municipio',            formData.municipio);
+    fd.append('colonia',              formData.colonia);
+    fd.append('codigo_postal',        formData.codigoPostal);
+    fd.append('calle',                formData.calle);
+    fd.append('numero_exterior',      formData.numeroExterior);
+    fd.append('numero_interior',      formData.numeroInterior || '');
+    fd.append('email',                formData.email);
+    fd.append('telefono',             formData.telefono);
+    fd.append('es_representante',     formData.esRepresentante     ? 'true' : 'false');
+    fd.append('razon_social',         formData.razonSocial         || '');
+    fd.append('nombre_representante', formData.nombreRepresentante || '');
+
+    // Paso 2 – Denuncia y ubicación    
+    fd.append('id_tipo_denuncia',   formData.idTipoDenuncia);
+    fd.append('id_tema_denuncia',   formData.idTemaDenuncia || '');
+    fd.append('clave_cvv',          formData.claveCvv || '');
+    fd.append('tipo_denuncia',      formData.tipoDenuncia);
+    fd.append('hechos_denunciados', formData.hechosDenunciados);
+    fd.append('latitud',            formData.latitude  ?? '');
+    fd.append('longitud',           formData.longitude ?? '');
+
+    // Paso 3 – Denunciado
+    fd.append('nombre_denunciado',          formData.nombreDenunciado);
+    fd.append('denunciado_es_moral',        formData.denunciadoEsMoral ? 'true' : 'false');
+    fd.append('razon_social_denunciado',    formData.razonSocialDenunciado    || '');
+    fd.append('municipio_denunciado',       formData.municipioDenunciado);
+    fd.append('colonia_denunciado',         formData.coloniaDenunciado);
+    fd.append('calle_denunciado',           formData.calleDenunciado);
+    fd.append('codigo_postal_denunciado',   formData.codigoPostalDenunciado);
+    fd.append('numero_exterior_denunciado', formData.numeroExteriorDenunciado);
+    fd.append('numero_interior_denunciado', formData.numeroInteriorDenunciado || '');
+
+    // Archivos de evidencia
+    uploadedFiles.forEach(function (file) {
+        fd.append('evidencias[]', file, file.name);
+    });
+
+    // Archivos de identificación
+    uploadedFilesIdentificacion.forEach(function (file) {
+        fd.append('identificacion[]', file, file.name);
+    });
+
+    fetch(document.getElementById('complaintForm').action, {
+        method:  'POST',
+        headers: { 'X-CSRF-TOKEN': getCsrfToken() },
+        body:    fd,
+    })
+        .then(function (res) {
+            if (!res.ok) { throw new Error('HTTP ' + res.status); }
+            return res.json();
+        })
+        .then(function (data) {
+            if (data.success) {
+                // Cerrar modal de previsualización
+                closePreviewModal();
+
+                // ¿Necesita verificación OTP?
+                if (data.necesita_verificacion) {
+                    // Mostrar modal de verificación OTP
+                    mostrarModalVerificacion(data.folio);
+                } else {
+                    // Flujo antiguo (por si acaso)
+                    mostrarExitoFinal(data.folio);
+                }
+            } else {
+                const errorMessages = Object.values(data.errors || {}).join('\n');
+                alert('Error al enviar la denuncia:\n' + (errorMessages || 'Error desconocido.'));
+            }
+        })
+        .catch(function (error) {
+            console.error('Error:', error);
+            alert('Error de conexión. Por favor intente nuevamente.');
+        })
+        .finally(function () {
+            confirmBtn.disabled = false;
+            confirmBtn.innerHTML = '<span class="flex items-center justify-center gap-2"><span class="material-symbols-outlined">send</span>Confirmar y Enviar</span>';
+        });
+}
+
 // Map Interaction
 function initializeMap() {
     if (map) return; // Already initialized
@@ -974,4 +1228,207 @@ function searchReport() {
             alert('Error de conexión. Por favor intente nuevamente.');
         });
 }
+
+// ─── Funciones del Modal de Verificación OTP ───────────────────────────────────
+
+function mostrarModalVerificacion(folio) {
+    // Guardar folio en variable global
+    window.folioActual = folio;
+    
+    // Mostrar el modal
+    document.getElementById('verificacionModal').style.display = 'flex';
+    
+    // Actualizar el folio en el modal
+    document.getElementById('folioVerificacion').textContent = folio;
+    
+    // Limpiar campo de código
+    document.getElementById('codigoOTP').value = '';
+    document.getElementById('codigoOTP').disabled = false;
+    document.getElementById('codigoOTP').focus();
+    
+    // Limpiar mensajes de error previos
+    document.getElementById('errorVerificacion').style.display = 'none';
+    
+    // Habilitar botones
+    document.getElementById('btnVerificar').disabled = false;
+    document.getElementById('btnReenviar').disabled = false;
+}
+
+function verificarCodigoOTP() {
+    const codigo = document.getElementById('codigoOTP').value.trim();
+    const folio = window.folioActual;
+    
+    // Validación básica
+    if (!/^\d{6}$/.test(codigo)) {
+        mostrarErrorVerificacion('El código debe ser de 6 dígitos');
+        return;
+    }
+    
+    // Deshabilitar botón
+    const btnVerificar = document.getElementById('btnVerificar');
+    btnVerificar.disabled = true;
+    btnVerificar.innerHTML = '<span class="flex items-center justify-center gap-2"><span class="material-symbols-outlined animate-spin">progress_activity</span>Verificando...</span>';
+    
+    // Enviar al backend
+    fetch(getBaseUrl() + 'inicio/verificarCodigo', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'X-CSRF-TOKEN': getCsrfToken()
+        },
+        body: new URLSearchParams({
+            folio: folio,
+            codigo: codigo
+        })
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.success) {
+            // ✅ Verificación exitosa
+            cerrarModalVerificacion();
+            mostrarExitoFinal(folio);
+        } else {
+            // ❌ Error
+            mostrarErrorVerificacion(data.message);
+            
+            // Si está bloqueado, deshabilitar input
+            if (data.codigo_bloqueado) {
+                document.getElementById('codigoOTP').disabled = true;
+                document.getElementById('btnVerificar').disabled = true;
+            }
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        mostrarErrorVerificacion('Error de conexión. Intenta nuevamente.');
+    })
+    .finally(() => {
+        btnVerificar.disabled = false;
+        btnVerificar.innerHTML = '<span class="flex items-center justify-center gap-2"><span class="material-symbols-outlined">verified</span>Verificar Código</span>';
+    });
+}
+
+function reenviarCodigoOTP() {
+    const folio = window.folioActual;
+    const btnReenviar = document.getElementById('btnReenviar');
+    
+    btnReenviar.disabled = true;
+    btnReenviar.innerHTML = '<span class="flex items-center justify-center gap-2"><span class="material-symbols-outlined animate-spin">progress_activity</span>Reenviando...</span>';
+    
+    fetch(getBaseUrl() + 'inicio/reenviarCodigo', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'X-CSRF-TOKEN': getCsrfToken()
+        },
+        body: new URLSearchParams({ folio: folio })
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.success) {
+            showNotification('Código reenviado. Revisa tu correo.', 'success');
+            // Limpiar campo y errores
+            document.getElementById('codigoOTP').value = '';
+            document.getElementById('codigoOTP').disabled = false;
+            document.getElementById('btnVerificar').disabled = false;
+            document.getElementById('errorVerificacion').style.display = 'none';
+        } else {
+            mostrarErrorVerificacion(data.message);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        mostrarErrorVerificacion('Error al reenviar el código');
+    })
+    .finally(() => {
+        btnReenviar.disabled = false;
+        btnReenviar.innerHTML = '<span class="flex items-center justify-center gap-2"><span class="material-symbols-outlined">mail</span>Reenviar Código</span>';
+    });
+}
+
+function mostrarErrorVerificacion(mensaje) {
+    const errorDiv = document.getElementById('errorVerificacion');
+    const errorTexto = document.getElementById('errorVerificacionTexto');
+    if (errorTexto) {
+        errorTexto.textContent = mensaje;
+    } else {
+        errorDiv.textContent = mensaje;
+    }
+    errorDiv.style.display = 'flex';
+}
+
+function cerrarModalVerificacion() {
+    document.getElementById('verificacionModal').style.display = 'none';
+}
+
+function cerrarModalVerificacionOnOverlay(event) {
+    // No permitir cerrar haciendo clic fuera (usuario debe verificar)
+    // if (event.target.id === 'verificacionModal') {
+    //     cerrarModalVerificacion();
+    // }
+}
+
+function mostrarExitoFinal(folio) {
+    // Mostrar toast con folio
+    document.getElementById('referenceId').textContent = 'Referencia: ' + folio;
+    document.getElementById('successToast').classList.add('show');
+
+    // Resetear formulario
+    document.getElementById('complaintForm').reset();
+    uploadedFiles = [];
+    uploadedFilesIdentificacion = [];
+    document.getElementById('filePreview').innerHTML = '';
+    document.getElementById('filePreviewIdentificacion').innerHTML = '';
+    document.getElementById('legalRepFields').style.display = 'none';
+    document.getElementById('denunciadoMoralFields').style.display = 'none';
+
+    if (marker) { 
+        map.removeLayer(marker); 
+        marker = null; 
+    }
+    document.getElementById('latitude').value = '';
+    document.getElementById('longitude').value = '';
+    formData.latitude = null;
+    formData.longitude = null;
+
+    currentStep = 1;
+    updateSteps();
+    localStorage.removeItem('complaintDraft');
+
+    setTimeout(function () {
+        document.getElementById('successToast').classList.remove('show');
+    }, 8000);
+}
+
+// Auto-formatear el código OTP mientras se escribe
+document.addEventListener('DOMContentLoaded', function() {
+    const codigoInput = document.getElementById('codigoOTP');
+    if (codigoInput) {
+        // Solo permitir dígitos
+        codigoInput.addEventListener('input', function(e) {
+            this.value = this.value.replace(/\D/g, '');
+            
+            // Limitar a 6 dígitos
+            if (this.value.length > 6) {
+                this.value = this.value.slice(0, 6);
+            }
+        });
+
+        // Permitir pegar código
+        codigoInput.addEventListener('paste', function(e) {
+            e.preventDefault();
+            const pastedText = (e.clipboardData || window.clipboardData).getData('text');
+            const codigo = pastedText.replace(/\D/g, '').slice(0, 6);
+            this.value = codigo;
+        });
+
+        // Permitir Enter para verificar
+        codigoInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter' && this.value.length === 6) {
+                verificarCodigoOTP();
+            }
+        });
+    }
+});
+
 

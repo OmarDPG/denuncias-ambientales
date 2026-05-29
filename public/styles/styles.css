@@ -229,6 +229,49 @@
       color: #2e7d32;
     }
 
+    /* Preview Modal specific styles */
+    #previewModal .modal-content {
+      max-width: 1200px;
+      max-height: 90vh;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    #previewModal .modal-content > div:nth-child(2) {
+      overflow-y: auto;
+      scrollbar-width: thin;
+      scrollbar-color: #1b4332 #e0e0e0;
+    }
+
+    #previewModal .modal-content > div:nth-child(2)::-webkit-scrollbar {
+      width: 8px;
+    }
+
+    #previewModal .modal-content > div:nth-child(2)::-webkit-scrollbar-track {
+      background: #e0e0e0;
+      border-radius: 4px;
+    }
+
+    #previewModal .modal-content > div:nth-child(2)::-webkit-scrollbar-thumb {
+      background: #1b4332;
+      border-radius: 4px;
+    }
+
+    #previewModal .modal-content > div:nth-child(2)::-webkit-scrollbar-thumb:hover {
+      background: #012d1d;
+    }
+
+    @keyframes spin {
+      to {
+        transform: rotate(360deg);
+      }
+    }
+
+    .animate-spin {
+      animation: spin 1s linear infinite;
+    }
+
     .status-cerrada {
       background-color: #f5f5f5;
       color: #616161;

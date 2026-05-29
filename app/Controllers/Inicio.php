@@ -85,6 +85,64 @@ class Inicio extends BaseController
         return $tipo ? $tipo['nombre'] : '';
     }
 
+    // ─── OTP: Generar código seguro con random_bytes ─────────────────────────────────
+    private function generarCodigoOTPSeguro(int $longitud = 6): string
+    {
+        $bytes = random_bytes($longitud);
+        $codigo = '';
+        for ($i = 0; $i < $longitud; $i++) {
+            $codigo .= ord($bytes[$i]) % 10;
+        }
+        return $codigo;
+    }
+
+    // ─── OTP: Hash del código para almacenamiento seguro ─────────────────────────────
+    private function hashCodigo(string $codigo): string
+    {
+        return password_hash($codigo, PASSWORD_DEFAULT);
+    }
+
+    // ─── OTP: Verificar código contra hash almacenado ────────────────────────────────
+    private function verificarCodigoHash(string $codigoIngresado, string $hashAlmacenado): bool
+    {
+        return password_verify($codigoIngresado, $hashAlmacenado);
+    }
+
+    // ─── OTP: Enviar código de verificación por email ────────────────────────────────
+    private function enviarCodigoVerificacion(
+        string $emailDestino,
+        string $nombreCompleto,
+        string $folio,
+        string $codigo
+    ): bool {
+        $email = \Config\Services::email();
+        
+        $email->setFrom(
+            getenv('email.fromEmail') ?: 'noreply@denuncias-ambientales.gob.mx',
+            getenv('email.fromName') ?: 'Sistema de Denuncias Ambientales'
+        );
+        $email->setTo($emailDestino);
+        $email->setSubject('Código de Verificación - Denuncia ' . $folio);
+        
+        $mensaje = view('emails/codigo_verificacion', [
+            'nombre' => $nombreCompleto,
+            'folio' => $folio,
+            'codigo' => $codigo,
+            'expiracion' => '30 minutos',
+            'fecha' => date('d/m/Y H:i:s')
+        ]);
+        
+        $email->setMessage($mensaje);
+        
+        if ($email->send()) {
+            log_message('info', "Código OTP enviado a {$emailDestino} para folio {$folio}");
+            return true;
+        } else {
+            log_message('error', "Error al enviar OTP a {$emailDestino}: " . $email->printDebugger(['headers']));
+            return false;
+        }
+    }
+
     // ─── POST inicio/registrarDenuncia ────────────────────────────────────────────────
     public function registrarDenuncia(): \CodeIgniter\HTTP\ResponseInterface
     {
@@ -238,13 +296,18 @@ class Inicio extends BaseController
             }
         }
 
+        // ── Generar código OTP con random_bytes ────────────────────────────────
+        $codigoOTP = $this->generarCodigoOTPSeguro(6);
+        $codigoHash = $this->hashCodigo($codigoOTP);
+        $expiracion = date('Y-m-d H:i:s', strtotime('+30 minutes'));
+
         // ── Transacción de base de datos ───────────────────────────────────────
         $db = \Config\Database::connect();
         $db->transStart();
 
         $dataDenuncia = [
             'folio'                      => 'PENDIENTE',
-            'estatus'                    => 'Nueva',
+            'estatus'                    => 'Pendiente de Verificación',
             'tipo_persona'               => $this->request->getPost('tipo_persona'),
             'nombre_completo'            => $this->request->getPost('nombre_completo'),
             'genero'                     => $this->request->getPost('genero'),
@@ -276,6 +339,10 @@ class Inicio extends BaseController
             'numero_exterior_denunciado' => $this->request->getPost('numero_exterior_denunciado'),
             'numero_interior_denunciado' => $this->request->getPost('numero_interior_denunciado') ?: null,
             'clave_cvv'                  => $this->request->getPost('clave_cvv') ?: null,
+            'codigo_verificacion'        => $codigoHash,
+            'codigo_verificacion_expira' => $expiracion,
+            'intentos_verificacion'      => 0,
+            'ultimo_envio_codigo'        => date('Y-m-d H:i:s'),
         ];
 
         $this->denunciasModel->skipValidation(true)->insert($dataDenuncia);
@@ -283,6 +350,11 @@ class Inicio extends BaseController
 
         $folio = 'LIVA-' . date('Y') . '-' . str_pad((string) $id, 4, '0', STR_PAD_LEFT);
         $this->denunciasModel->update($id, ['folio' => $folio]);
+
+        // Log para debug: Verificar que el estatus se guardó correctamente
+        $denunciaGuardada = $this->denunciasModel->find($id);
+        log_message('info', "Denuncia {$folio} guardada con estatus: '{$denunciaGuardada['estatus']}'");
+        log_message('debug', "Código OTP generado para {$folio} (hash): " . substr($codigoHash, 0, 20) . "...");
 
         foreach ($evidencias as $evidencia) {
             $evidencia['id_denuncia'] = $id;
@@ -298,9 +370,215 @@ class Inicio extends BaseController
             ]);
         }
 
+        // ── Enviar código de verificación por email ───────────────────────────
+        $emailEnviado = $this->enviarCodigoVerificacion(
+            $this->request->getPost('email'),
+            $this->request->getPost('nombre_completo'),
+            $folio,
+            $codigoOTP
+        );
+
+        if (!$emailEnviado) {
+            log_message('warning', "No se pudo enviar código OTP para folio {$folio}");
+        }
+
         return $this->response->setJSON([
             'success' => true,
-            'folio'   => $folio,
+            'folio' => $folio,
+            'necesita_verificacion' => true,
+            'mensaje' => 'Denuncia registrada. Por favor verifica tu correo electrónico.'
+        ]);
+    }
+
+    // ─── POST inicio/verificarCodigo ──────────────────────────────────────────────────
+    public function verificarCodigoOTP(): \CodeIgniter\HTTP\ResponseInterface
+    {
+        if (!$this->request->is('post')) {
+            return $this->response->setStatusCode(405)->setJSON([
+                'success' => false,
+                'message' => 'Método no permitido'
+            ]);
+        }
+
+        $folio = strtoupper(trim($this->request->getPost('folio') ?? ''));
+        $codigoIngresado = trim($this->request->getPost('codigo') ?? '');
+
+        // ── Validaciones básicas ──────────────────────────────────────────────
+        if (empty($folio) || empty($codigoIngresado)) {
+            return $this->response->setJSON([
+                'success' => false,
+                'message' => 'Folio y código son requeridos'
+            ]);
+        }
+
+        if (!preg_match('/^\d{6}$/', $codigoIngresado)) {
+            return $this->response->setJSON([
+                'success' => false,
+                'message' => 'El código debe ser de 6 dígitos'
+            ]);
+        }
+
+        // ── Buscar denuncia ───────────────────────────────────────────────────
+        log_message('info', "Intentando verificar código para folio: {$folio}");
+        
+        // Debug: Buscar primero sin filtro de estatus para ver qué hay
+        $denunciaDebug = $this->denunciasModel->where('folio', $folio)->first();
+        if ($denunciaDebug) {
+            log_message('debug', "Denuncia encontrada - ID: {$denunciaDebug['id_denuncia']}, Estatus actual: '{$denunciaDebug['estatus']}'");
+        } else {
+            log_message('warning', "No existe ninguna denuncia con folio: {$folio}");
+        }
+        
+        $denuncia = $this->denunciasModel
+            ->where('folio', $folio)
+            ->where('estatus', 'Pendiente de Verificación')
+            ->first();
+
+        if (!$denuncia) {
+            log_message('warning', "Denuncia {$folio} no encontrada con estatus 'Pendiente de Verificación'. Estatus actual: " . ($denunciaDebug['estatus'] ?? 'N/A'));
+            return $this->response->setJSON([
+                'success' => false,
+                'message' => 'Denuncia no encontrada o ya verificada'
+            ]);
+        }
+
+        log_message('info', "Denuncia {$folio} encontrada, verificando código...");
+
+        // ── Verificar límite de intentos ──────────────────────────────────────
+        if ($denuncia['intentos_verificacion'] >= 3) {
+            return $this->response->setJSON([
+                'success' => false,
+                'message' => 'Has excedido el número máximo de intentos. Solicita un nuevo código.',
+                'codigo_bloqueado' => true
+            ]);
+        }
+
+        // ── Verificar expiración ──────────────────────────────────────────────
+        $ahora = new \DateTime();
+        $expira = new \DateTime($denuncia['codigo_verificacion_expira']);
+
+        if ($ahora > $expira) {
+            return $this->response->setJSON([
+                'success' => false,
+                'message' => 'El código ha expirado. Solicita uno nuevo.',
+                'codigo_expirado' => true
+            ]);
+        }
+
+        // ── Verificar código ──────────────────────────────────────────────────
+        if (!$this->verificarCodigoHash($codigoIngresado, $denuncia['codigo_verificacion'])) {
+            // Incrementar intentos fallidos
+            $this->denunciasModel->update($denuncia['id_denuncia'], [
+                'intentos_verificacion' => $denuncia['intentos_verificacion'] + 1
+            ]);
+
+            $intentosRestantes = 3 - ($denuncia['intentos_verificacion'] + 1);
+
+            return $this->response->setJSON([
+                'success' => false,
+                'message' => "Código incorrecto. Te quedan {$intentosRestantes} intentos.",
+                'intentos_restantes' => $intentosRestantes
+            ]);
+        }
+
+        // ── ✅ Código correcto - Activar denuncia ─────────────────────────────
+        $this->denunciasModel->update($denuncia['id_denuncia'], [
+            'estatus' => 'Nueva',
+            'verificado_en' => date('Y-m-d H:i:s'),
+            'codigo_verificacion' => null,
+            'codigo_verificacion_expira' => null,
+            'intentos_verificacion' => 0
+        ]);
+
+        log_message('info', "Denuncia {$folio} verificada exitosamente");
+
+        return $this->response->setJSON([
+            'success' => true,
+            'message' => '¡Denuncia verificada exitosamente!',
+            'folio' => $folio
+        ]);
+    }
+
+    // ─── POST inicio/reenviarCodigo ───────────────────────────────────────────────────
+    public function reenviarCodigoOTP(): \CodeIgniter\HTTP\ResponseInterface
+    {
+        if (!$this->request->is('post')) {
+            return $this->response->setStatusCode(405)->setJSON([
+                'success' => false,
+                'message' => 'Método no permitido'
+            ]);
+        }
+
+        $folio = strtoupper(trim($this->request->getPost('folio') ?? ''));
+
+        if (empty($folio)) {
+            return $this->response->setJSON([
+                'success' => false,
+                'message' => 'Folio requerido'
+            ]);
+        }
+
+        // ── Buscar denuncia ───────────────────────────────────────────────────
+        $denuncia = $this->denunciasModel
+            ->where('folio', $folio)
+            ->where('estatus', 'Pendiente de Verificación')
+            ->first();
+
+        if (!$denuncia) {
+            return $this->response->setJSON([
+                'success' => false,
+                'message' => 'Denuncia no encontrada o ya verificada'
+            ]);
+        }
+
+        // ── Rate limiting: máximo 1 reenvío cada 2 minutos ────────────────────
+        if ($denuncia['ultimo_envio_codigo']) {
+            $ultimoEnvio = new \DateTime($denuncia['ultimo_envio_codigo']);
+            $ahora = new \DateTime();
+            $diferencia = $ahora->getTimestamp() - $ultimoEnvio->getTimestamp();
+
+            if ($diferencia < 120) { // 2 minutos
+                $segundosRestantes = 120 - $diferencia;
+                return $this->response->setJSON([
+                    'success' => false,
+                    'message' => "Espera {$segundosRestantes} segundos antes de solicitar otro código"
+                ]);
+            }
+        }
+
+        // ── Generar nuevo código ──────────────────────────────────────────────
+        $nuevoCodigoOTP = $this->generarCodigoOTPSeguro(6);
+        $nuevoCodigoHash = $this->hashCodigo($nuevoCodigoOTP);
+        $nuevaExpiracion = date('Y-m-d H:i:s', strtotime('+30 minutes'));
+
+        // ── Actualizar en BD ──────────────────────────────────────────────────
+        $this->denunciasModel->update($denuncia['id_denuncia'], [
+            'codigo_verificacion' => $nuevoCodigoHash,
+            'codigo_verificacion_expira' => $nuevaExpiracion,
+            'intentos_verificacion' => 0,
+            'ultimo_envio_codigo' => date('Y-m-d H:i:s')
+        ]);
+
+        // ── Enviar email ──────────────────────────────────────────────────────
+        $emailEnviado = $this->enviarCodigoVerificacion(
+            $denuncia['email'],
+            $denuncia['nombre_completo'],
+            $folio,
+            $nuevoCodigoOTP
+        );
+
+        if (!$emailEnviado) {
+            return $this->response->setJSON([
+                'success' => false,
+                'message' => 'Error al enviar el correo. Intenta nuevamente.'
+            ]);
+        }
+
+        log_message('info', "Código OTP reenviado para folio {$folio}");
+
+        return $this->response->setJSON([
+            'success' => true,
+            'message' => 'Código reenviado exitosamente. Revisa tu correo.'
         ]);
     }
 
@@ -324,6 +602,7 @@ class Inicio extends BaseController
         }
 
         $estatusMap = [
+            'Pendiente de Verificación' => ['text' => 'Pendiente de Verificación', 'icon' => 'pending', 'class' => 'pendiente-verificacion'],
             'Nueva'         => ['text' => 'Recibida',    'icon' => 'inbox',        'class' => 'recibida'],
             'En Revisión'   => ['text' => 'En Revisión', 'icon' => 'pending',      'class' => 'en-revision'],
             'Investigación' => ['text' => 'Investigación',  'icon' => 'schedule',     'class' => 'investigacion'],

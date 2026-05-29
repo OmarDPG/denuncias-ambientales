@@ -8,6 +8,8 @@ use CodeIgniter\Router\RouteCollection;
 // $routes->get('/', 'Home::index');
 $routes->get('/',  'Inicio::index');
 $routes->post('inicio/registrarDenuncia',        'Inicio::registrarDenuncia');
+$routes->post('inicio/verificarCodigo',          'Inicio::verificarCodigoOTP');
+$routes->post('inicio/reenviarCodigo',           'Inicio::reenviarCodigoOTP');
 $routes->get('inicio/buscarReporte',  'Inicio::buscarReporte');
 $routes->get('inicio/descargarDocumentoResolucion/(:num)', 'Inicio::descargarDocumentoResolucion/$1');
 $routes->get('inicio/getTemasPorTipo', 'Inicio::getTemasPorTipo');

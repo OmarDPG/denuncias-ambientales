@@ -50,7 +50,12 @@ class DenunciasModel extends Model
         'codigo_postal_denunciado',
         'numero_exterior_denunciado',
         'numero_interior_denunciado',
-        'clave_cvv'
+        'clave_cvv',
+        'codigo_verificacion',
+        'codigo_verificacion_expira',
+        'intentos_verificacion',
+        'verificado_en',
+        'ultimo_envio_codigo'
     ];
 
     protected $useTimestamps = false;
