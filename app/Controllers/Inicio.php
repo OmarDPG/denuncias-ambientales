@@ -29,7 +29,7 @@ class Inicio extends BaseController
     {
         // Cargar tipos de denuncia activos
         $data['tiposDenuncia'] = $this->tipoDenunciaModel->where('activo', 1)->findAll();
-        
+
         return view('inicio/header')
             . view('inicio/index', $data)
             . view('inicio/footer');
@@ -39,7 +39,7 @@ class Inicio extends BaseController
     public function getTemasPorTipo(): \CodeIgniter\HTTP\ResponseInterface
     {
         $idTipo = $this->request->getGet('id_tipo');
-        
+
         if (!$idTipo) {
             return $this->response->setJSON([
                 'success' => false,
@@ -80,7 +80,7 @@ class Inicio extends BaseController
         if (!$idTipo) {
             return '';
         }
-        
+
         $tipo = $this->tipoDenunciaModel->find($idTipo);
         return $tipo ? $tipo['nombre'] : '';
     }
@@ -116,14 +116,14 @@ class Inicio extends BaseController
         string $codigo
     ): bool {
         $email = \Config\Services::email();
-        
+
         $email->setFrom(
             getenv('email.fromEmail') ?: 'noreply@denuncias-ambientales.gob.mx',
             getenv('email.fromName') ?: 'Sistema de Denuncias Ambientales'
         );
         $email->setTo($emailDestino);
         $email->setSubject('Código de Verificación - Denuncia ' . $folio);
-        
+
         $mensaje = view('emails/codigo_verificacion', [
             'nombre' => $nombreCompleto,
             'folio' => $folio,
@@ -131,9 +131,9 @@ class Inicio extends BaseController
             'expiracion' => '30 minutos',
             'fecha' => date('d/m/Y H:i:s')
         ]);
-        
+
         $email->setMessage($mensaje);
-        
+
         if ($email->send()) {
             log_message('info', "Código OTP enviado a {$emailDestino} para folio {$folio}");
             return true;
@@ -171,7 +171,7 @@ class Inicio extends BaseController
             'telefono'                   => ['label' => 'Teléfono',              'rules' => 'required|exact_length[10]|numeric'],
             'id_tipo_denuncia'           => ['label' => 'Tipo de Denuncia',      'rules' => 'required|numeric|is_not_unique[tipo_denuncia.id_tipo_denuncia]'],
             'id_tema_denuncia'           => ['label' => 'Tema de Denuncia',      'rules' => 'permit_empty|numeric|is_not_unique[tema_denuncia.id_tema_denuncia]'],
-            'clave_cvv'                  => ['label' => 'Centro de Verificación','rules' => 'permit_empty|max_length[20]|is_not_unique[centros_verificacion_vehicular.clave]'],
+            'clave_cvv'                  => ['label' => 'Centro de Verificación', 'rules' => 'permit_empty|max_length[20]|is_not_unique[centros_verificacion_vehicular.clave]'],
             'hechos_denunciados'         => ['label' => 'Hechos Denunciados',    'rules' => 'required|min_length[20]|max_length[10000]'],
             'latitud'                    => ['label' => 'Latitud',               'rules' => 'permit_empty|decimal'],
             'longitud'                   => ['label' => 'Longitud',              'rules' => 'permit_empty|decimal'],
@@ -348,7 +348,7 @@ class Inicio extends BaseController
         $this->denunciasModel->skipValidation(true)->insert($dataDenuncia);
         $id = $db->insertID();
 
-        $folio = 'LIVA-' . date('Y') . '-' . str_pad((string) $id, 4, '0', STR_PAD_LEFT);
+        $folio = 'DGIV.DA-' . date('Y') . '-' . str_pad((string) $id, 4, '0', STR_PAD_LEFT);
         $this->denunciasModel->update($id, ['folio' => $folio]);
 
         // Log para debug: Verificar que el estatus se guardó correctamente
@@ -420,7 +420,7 @@ class Inicio extends BaseController
 
         // ── Buscar denuncia ───────────────────────────────────────────────────
         log_message('info', "Intentando verificar código para folio: {$folio}");
-        
+
         // Debug: Buscar primero sin filtro de estatus para ver qué hay
         $denunciaDebug = $this->denunciasModel->where('folio', $folio)->first();
         if ($denunciaDebug) {
@@ -428,7 +428,7 @@ class Inicio extends BaseController
         } else {
             log_message('warning', "No existe ninguna denuncia con folio: {$folio}");
         }
-        
+
         $denuncia = $this->denunciasModel
             ->where('folio', $folio)
             ->where('estatus', 'Pendiente de Verificación')
@@ -491,6 +491,21 @@ class Inicio extends BaseController
         ]);
 
         log_message('info', "Denuncia {$folio} verificada exitosamente");
+
+        // GENERAR ACUSE Y ENVIAR EMAIL DE CONFIRMACIÓN
+        try {
+            $denunciaCompleta = $this->denunciasModel->find($denuncia['id_denuncia']);
+
+            $rutaPDF = $this->generarAcusePDF($denunciaCompleta);
+
+            $emailEnviado = $this->enviarEmailConfirmacion($denunciaCompleta, $rutaPDF);
+
+            if (!$emailEnviado) {
+                log_message('warning', "Email de confirmación no enviado para folio {$folio}");
+            }
+        } catch (\Exception $e) {
+            log_message('error', "Error generando acuse para {$folio}: " . $e->getMessage());
+        }
 
         return $this->response->setJSON([
             'success' => true,
@@ -616,23 +631,23 @@ class Inicio extends BaseController
         // Si el estado es Resuelto, obtener el documento de resolución
         $documentoResolucion = null;
         $estatusLower = mb_strtolower($denuncia['estatus'], 'UTF-8');
-        
+
         // Log para depuración
         log_message('debug', "Buscando documento para denuncia {$denuncia['folio']} con estatus: '{$denuncia['estatus']}' (lower: '{$estatusLower}')");
-        
+
         if ($estatusLower === 'resuelto' || $estatusLower === 'resuelta') {
             // Obtener el documento marcado como 'Resolución' (buscar ambas variantes por si acaso)
             $documento = $this->archivosDenunciasModel
                 ->where('id_denuncia', $denuncia['id_denuncia'])
                 ->groupStart()
-                    ->where('tipo_documento', 'Resolución')
-                    ->orWhere('tipo_documento', 'resolución')
+                ->where('tipo_documento', 'Resolución')
+                ->orWhere('tipo_documento', 'resolución')
                 ->groupEnd()
                 ->orderBy('id_evidencia', 'DESC')
                 ->first();
-            
+
             log_message('debug', "Documentos encontrados: " . ($documento ? json_encode($documento) : 'ninguno'));
-            
+
             if ($documento) {
                 $documentoResolucion = [
                     'id'             => $documento['id_evidencia'],
@@ -668,7 +683,7 @@ class Inicio extends BaseController
 
         // Obtener información del documento
         $evidencia = $this->archivosDenunciasModel->find($idEvidencia);
-        
+
         if (!$evidencia) {
             return $this->response->setStatusCode(404)
                 ->setBody('Documento no encontrado');
@@ -678,7 +693,7 @@ class Inicio extends BaseController
         // Los documentos de resolución se almacenan en resoluciones/
         $nombreArchivo = $evidencia['ruta_archivo'];
         $rutaArchivo = WRITEPATH . 'uploads/resoluciones/' . $nombreArchivo;
-        
+
         // Verificar que el archivo existe
         if (!file_exists($rutaArchivo)) {
             log_message('error', "Documento de resolución no encontrado: {$rutaArchivo}");
@@ -696,7 +711,7 @@ class Inicio extends BaseController
         // Determinar si es para descargar o visualizar
         $esDescarga = $this->request->getGet('download') === '1';
         $disposition = $esDescarga ? 'attachment' : 'inline';
-        
+
         // Servir el archivo
         return $this->response
             ->setHeader('Content-Type', $evidencia['tipo_archivo'])
@@ -705,5 +720,266 @@ class Inicio extends BaseController
             ->setHeader('Cache-Control', 'public, max-age=3600')
             ->setHeader('Pragma', 'public')
             ->setBody(file_get_contents($rutaArchivo));
+    }
+
+    private function generarAcusePDF(array $denuncia): string
+    {
+        // Crear directorio si no existe
+        $dirAcuses = WRITEPATH . 'uploads/acuses/';
+        if (!is_dir($dirAcuses)) {
+            mkdir($dirAcuses, 0755, true);
+        }
+
+        // Preparar datos para la vista
+        $fechaRecepcion = new \DateTime($denuncia['verificado_en'] ?? $denuncia['fecha_captura']);
+        $fechaActual = new \DateTime();
+
+        // Formatear fecha estilo: "01 de junio de 2026"
+        $meses = [
+            'enero',
+            'febrero',
+            'marzo',
+            'abril',
+            'mayo',
+            'junio',
+            'julio',
+            'agosto',
+            'septiembre',
+            'octubre',
+            'noviembre',
+            'diciembre'
+        ];
+        $fechaActualTexto = $fechaActual->format('d') . ' de ' .
+            $meses[(int)$fechaActual->format('m') - 1] . ' de ' .
+            $fechaActual->format('Y');
+
+        $data = [
+            'folio' => $denuncia['folio'],
+            'nombreCompleto' => $denuncia['nombre_completo'],
+            'fechaActual' => $fechaActualTexto,
+            'fechaRecepcion' => $fechaRecepcion->format('d/m/Y H:i:s'),
+            'fechaRecepcionFormato' => $fechaRecepcion->format('d/m/Y'),
+            'tipoDenuncia' => $denuncia['tipo_denuncia'] ?? 'No especificado',
+            'municipioDenunciado' => $denuncia['municipio_denunciado'] ?? '',
+        ];
+
+        // Renderizar vista
+        $html = view('pdf/acuse_denuncia', $data);
+
+        // Configurar DOMPDF 2.0
+        $options = new \Dompdf\Options();
+        $options->setIsRemoteEnabled(true); // Para cargar imágenes locales
+        // $options->setDefaultFont('Arial');
+        $options->setIsHtml5ParserEnabled(true);
+        $options->setChroot(FCPATH); // Permitir acceso a archivos en public/
+
+        $dompdf = new \Dompdf\Dompdf($options);
+        $this->cargarFuentesMontserrat($dompdf);
+        $dompdf->loadHtml($html);
+        $dompdf->setPaper('letter', 'portrait');
+        $dompdf->render();
+
+        // Guardar PDF
+        $nombreArchivo = 'acuse_' . $denuncia['folio'] . '_' . time() . '.pdf';
+        $rutaCompleta = $dirAcuses . $nombreArchivo;
+
+        file_put_contents($rutaCompleta, $dompdf->output());
+
+        log_message('info', "Acuse PDF generado: {$rutaCompleta}");
+
+        return $rutaCompleta;
+    }
+    private function enviarEmailConfirmacion(array $denuncia, string $rutaPDF): bool
+    {
+        $email = \Config\Services::email();
+
+        $email->setFrom(
+            getenv('email.fromEmail') ?: 'noreply@denuncias-ambientales.gob.mx',
+            'Sistema de Denuncias Ambientales - SMAOT'
+        );
+
+        $email->setTo($denuncia['email']);
+        $email->setSubject('Confirmación de Denuncia Ambiental - Folio ' . $denuncia['folio']);
+
+        // Renderizar vista del email
+        $mensaje = view('emails/confirmacion_denuncia', [
+            'folio' => $denuncia['folio'],
+            'nombreCompleto' => $denuncia['nombre_completo'],
+            'tipoDenuncia' => $denuncia['tipo_denuncia'],
+            'fechaRecepcion' => date('d/m/Y H:i:s', strtotime($denuncia['verificado_en'] ?? $denuncia['fecha_captura']))
+        ]);
+
+        $email->setMessage($mensaje);
+        $email->setMailType('html');
+
+        // Adjuntar PDF
+        $email->attach($rutaPDF);
+
+        if ($email->send()) {
+            log_message('info', "Email de confirmación enviado a {$denuncia['email']} - Folio: {$denuncia['folio']}");
+            return true;
+        } else {
+            log_message('error', "Error al enviar confirmación - Folio {$denuncia['folio']}: " . $email->printDebugger(['headers']));
+            return false;
+        }
+    }
+
+    // ─── MÉTODO DE PRUEBA: Generar PDF sin formulario ────────────────────────────────
+    /**
+     * Método de prueba para generar el PDF del acuse sin llenar el formulario
+     * URL: http://localhost/denuncias-ambientales/inicio/testPDF
+     * 
+     * Genera datos de prueba y muestra el PDF directamente en el navegador
+     */
+    public function testPDF()
+    {
+        // Solo permitir en desarrollo
+        if (ENVIRONMENT !== 'development') {
+            return $this->response->setStatusCode(403)->setBody('No disponible en producción');
+        }
+
+        try {
+            // Datos de prueba simulados
+            $denunciaPrueba = [
+                'folio' => 'LIVA-2026-TEST-' . rand(1000, 9999),
+                'nombre_completo' => 'Juan Pérez García',
+                'email' => 'prueba@ejemplo.com',
+                'tipo_denuncia' => 'Contaminación del Agua',
+                'municipio_denunciado' => 'San Andrés Cholula',
+                'fecha_captura' => date('Y-m-d H:i:s'),
+                'verificado_en' => date('Y-m-d H:i:s'),
+            ];
+
+            // Preparar datos para la vista (mismo formato que generarAcusePDF)
+            $fechaRecepcion = new \DateTime($denunciaPrueba['verificado_en']);
+            $fechaActual = new \DateTime();
+
+            $meses = [
+                'enero',
+                'febrero',
+                'marzo',
+                'abril',
+                'mayo',
+                'junio',
+                'julio',
+                'agosto',
+                'septiembre',
+                'octubre',
+                'noviembre',
+                'diciembre'
+            ];
+
+            $fechaActualTexto = $fechaActual->format('d') . ' de ' .
+                $meses[(int)$fechaActual->format('m') - 1] . ' de ' .
+                $fechaActual->format('Y');
+
+            $data = [
+                'folio' => $denunciaPrueba['folio'],
+                'nombreCompleto' => $denunciaPrueba['nombre_completo'],
+                'fechaActual' => $fechaActualTexto,
+                'fechaRecepcion' => $fechaRecepcion->format('d/m/Y H:i:s'),
+                'fechaRecepcionFormato' => $fechaRecepcion->format('d/m/Y'),
+                'tipoDenuncia' => $denunciaPrueba['tipo_denuncia'],
+                'municipioDenunciado' => $denunciaPrueba['municipio_denunciado'],
+            ];
+
+            // Renderizar vista
+            $html = view('pdf/acuse_denuncia', $data);
+
+            // Configurar DOMPDF 2.0
+            $options = new \Dompdf\Options();
+            $options->setIsRemoteEnabled(true);
+            $options->setDefaultFont('Arial');
+            $options->setIsHtml5ParserEnabled(true);
+            $options->setChroot(FCPATH);
+
+            $dompdf = new \Dompdf\Dompdf($options);
+            $dompdf->loadHtml($html);
+            $dompdf->setPaper('letter', 'portrait');
+            $dompdf->render();
+
+            // Mostrar PDF en el navegador (no descargar)
+            $dompdf->stream('acuse_prueba_' . time() . '.pdf', [
+                'Attachment' => false // false = mostrar en navegador
+            ]);
+        } catch (\Exception $e) {
+            log_message('error', "Error en testPDF: " . $e->getMessage());
+            return $this->response
+                ->setStatusCode(500)
+                ->setBody('<h1>Error al generar PDF</h1><pre>' . esc($e->getMessage()) . '</pre>');
+        }
+    }
+
+    // ─── MÉTODO DE PRUEBA: Ver solo el HTML del acuse ────────────────────────────────
+    /**
+     * Método de prueba para ver el HTML del acuse sin generar PDF
+     * URL: http://localhost/denuncias-ambientales/inicio/testHTML
+     * 
+     * Útil para depurar el diseño y CSS antes de generar el PDF
+     */
+    public function testHTML()
+    {
+        // Solo permitir en desarrollo
+        if (ENVIRONMENT !== 'development') {
+            return $this->response->setStatusCode(403)->setBody('No disponible en producción');
+        }
+
+        // Datos de prueba
+        $fechaActual = new \DateTime();
+        $meses = [
+            'enero',
+            'febrero',
+            'marzo',
+            'abril',
+            'mayo',
+            'junio',
+            'julio',
+            'agosto',
+            'septiembre',
+            'octubre',
+            'noviembre',
+            'diciembre'
+        ];
+
+        $fechaActualTexto = $fechaActual->format('d') . ' de ' .
+            $meses[(int)$fechaActual->format('m') - 1] . ' de ' .
+            $fechaActual->format('Y');
+
+        $data = [
+            'folio' => 'LIVA-2026-TEST-' . rand(1000, 9999),
+            'nombreCompleto' => 'María López Hernández',
+            'fechaActual' => $fechaActualTexto,
+            'fechaRecepcion' => date('d/m/Y H:i:s'),
+            'fechaRecepcionFormato' => date('d/m/Y'),
+            'tipoDenuncia' => 'Contaminación Atmosférica',
+            'municipioDenunciado' => 'Puebla',
+        ];
+
+        // Renderizar y mostrar directamente el HTML
+        return view('pdf/acuse_denuncia', $data);
+    }
+
+    // Agregar Monserrat a la generacion de PDF
+    private function cargarFuentesMontserrat(\Dompdf\Dompdf $dompdf)
+    {
+        $fontDir = FCPATH . 'fonts/montserrat/';
+
+        $fontMetrics = $dompdf->getFontMetrics();
+
+        // Registrar Montserrat Regular
+        if (file_exists($fontDir . 'Montserrat-Regular.ttf')) {
+            $fontMetrics->registerFont(
+                ['family' => 'Montserrat', 'style' => 'normal', 'weight' => 'normal'],
+                $fontDir . 'Montserrat-Regular.ttf'
+            );
+        }
+
+        // Registrar Montserrat Bold
+        if (file_exists($fontDir . 'Montserrat-Bold.ttf')) {
+            $fontMetrics->registerFont(
+                ['family' => 'Montserrat', 'style' => 'normal', 'weight' => 'bold'],
+                $fontDir . 'Montserrat-Bold.ttf'
+            );
+        }
     }
 }

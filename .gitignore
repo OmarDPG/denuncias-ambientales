@@ -128,7 +128,7 @@ nb-configuration.xml
 
 *.sql
 *.md
-
+Texto acuse.txt
 #-------------------------
 # Node.js / NPM
 #-------------------------

@@ -15,6 +15,12 @@ $routes->get('inicio/descargarDocumentoResolucion/(:num)', 'Inicio::descargarDoc
 $routes->get('inicio/getTemasPorTipo', 'Inicio::getTemasPorTipo');
 $routes->get('inicio/getCentrosVerificacion', 'Inicio::getCentrosVerificacion');
 
+// ─── Rutas de prueba (solo desarrollo) ─────────────────────────────────────
+if (ENVIRONMENT === 'development') {
+    $routes->get('inicio/testPDF', 'Inicio::testPDF');   // Generar y mostrar PDF de prueba
+    $routes->get('inicio/testHTML', 'Inicio::testHTML'); // Ver HTML del acuse sin PDF
+}
+
 $routes->post('admin/actualizarEstado', 'Admin::actualizarEstado');
 $routes->get('admin/verEvidencia/(:num)', 'Admin::verEvidencia/$1');
 
