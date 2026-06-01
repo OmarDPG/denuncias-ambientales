@@ -177,7 +177,7 @@
                 <p style="margin: 0; color: #2e7d32;">
                     Le confirmamos que su denuncia ambiental ha sido verificada exitosamente 
                     y ha sido registrada en el sistema de la Secretaría de Medio Ambiente, 
-                    Ordenamiento Territorial y Desarrollo Sustentable del Estado de Puebla.
+                    Desarrollo Sustentable y Ordenamiento Territorial del Estado de Puebla.
                 </p>
             </div>
 
@@ -260,7 +260,7 @@
 
         <!-- Footer -->
         <div class="footer">
-            <p><strong>Secretaría de Medio Ambiente, Ordenamiento Territorial<br>y Desarrollo Sustentable del Estado de Puebla</strong></p>
+            <p><strong>Secretaría de Medio Ambiente, Desarrollo Sustentable y Ordenamiento Territorial del Estado de Puebla</strong></p>
             <p>Sistema de Denuncias Ambientales</p>
             <p style="margin-top: 15px; font-size: 11px; color: #999;">
                 Gobierno del Estado de Puebla | Por Amor a Puebla
