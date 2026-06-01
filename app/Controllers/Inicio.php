@@ -766,12 +766,19 @@ class Inicio extends BaseController
         // Renderizar vista
         $html = view('pdf/acuse_denuncia', $data);
 
+        // Crear directorio de caché de fuentes si no existe
+        $fontCacheDir = WRITEPATH . 'cache/dompdf-fonts/';
+        if (!is_dir($fontCacheDir)) {
+            mkdir($fontCacheDir, 0755, true);
+        }
+
         // Configurar DOMPDF 2.0
         $options = new \Dompdf\Options();
         $options->setIsRemoteEnabled(true); // Para cargar imágenes locales
-        // $options->setDefaultFont('Arial');
         $options->setIsHtml5ParserEnabled(true);
         $options->setChroot(FCPATH); // Permitir acceso a archivos en public/
+        $options->setFontCache($fontCacheDir); // Directorio con permisos de escritura
+        $options->setFontDir($fontCacheDir); // Directorio adicional para fuentes
 
         $dompdf = new \Dompdf\Dompdf($options);
         $this->cargarFuentesMontserrat($dompdf);
@@ -886,14 +893,22 @@ class Inicio extends BaseController
             // Renderizar vista
             $html = view('pdf/acuse_denuncia', $data);
 
+            // Crear directorio de caché de fuentes si no existe
+            $fontCacheDir = WRITEPATH . 'cache/dompdf-fonts/';
+            if (!is_dir($fontCacheDir)) {
+                mkdir($fontCacheDir, 0755, true);
+            }
+
             // Configurar DOMPDF 2.0
             $options = new \Dompdf\Options();
             $options->setIsRemoteEnabled(true);
-            $options->setDefaultFont('Arial');
             $options->setIsHtml5ParserEnabled(true);
             $options->setChroot(FCPATH);
+            $options->setFontCache($fontCacheDir);
+            $options->setFontDir($fontCacheDir);
 
             $dompdf = new \Dompdf\Dompdf($options);
+            $this->cargarFuentesMontserrat($dompdf);
             $dompdf->loadHtml($html);
             $dompdf->setPaper('letter', 'portrait');
             $dompdf->render();
