@@ -786,8 +786,9 @@ class Inicio extends BaseController
         $dompdf->setPaper('letter', 'portrait');
         $dompdf->render();
 
-        // Guardar PDF
-        $nombreArchivo = 'acuse_' . $denuncia['folio'] . '_' . time() . '.pdf';
+        // Guardar PDF - Sanitizar nombre del folio para evitar problemas con caracteres especiales
+        $folioSanitizado = str_replace(['/', '\\', ':', '*', '?', '"', '<', '>', '|'], '-', $denuncia['folio']);
+        $nombreArchivo = 'acuse_' . $folioSanitizado . '_' . time() . '.pdf';
         $rutaCompleta = $dirAcuses . $nombreArchivo;
 
         file_put_contents($rutaCompleta, $dompdf->output());
