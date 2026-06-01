@@ -462,7 +462,7 @@
                             style="font-variation-settings: 'FILL' 1;">check_circle</span>
                     </div>
                     <div>
-                        <h4 class="font-bold text-on-tertiary-fixed" id="referenceId">Referencia: LIVA-2024-8842</h4>
+                        <h4 class="font-bold text-on-tertiary-fixed" id="referenceId">Referencia: SMADSOT.SAQDE-8842/2026</h4>
                         <p class="text-xs text-on-tertiary-fixed-variant">Este ID único rastrea su caso a través del ciclo de vida
                             de la administración.</p>
                     </div>
@@ -489,7 +489,7 @@
             <div id="searchForm" class="space-y-4">
                 <div class="space-y-2">
                     <label class="font-headline font-bold text-sm text-primary uppercase tracking-wider">Folio del Reporte</label>
-                    <input id="folioInput" type="text" placeholder="Ej: LIVA-2026-1234"
+                    <input id="folioInput" type="text" placeholder="Ej: SMADSOT.SAQDE-1234/2026"
                         class="w-full bg-surface-container-low border-0 border-b-2 border-outline-variant/40 focus:border-primary focus:ring-0 py-3 text-on-surface font-body"
                         onkeypress="if(event.key === 'Enter') searchReport()" />
                     <p class="text-xs text-secondary mt-1">Ingrese el folio proporcionado al momento de enviar su denuncia</p>
@@ -506,7 +506,7 @@
                     <div class="flex items-center justify-between">
                         <div>
                             <p class="text-xs text-secondary uppercase tracking-wider">Folio</p>
-                            <p id="resultFolio" class="font-headline font-bold text-xl text-primary">LIVA-2026-1234</p>
+                            <p id="resultFolio" class="font-headline font-bold text-xl text-primary">SMADSOT.SAQDE-1234/2026</p>
                         </div>
                         <div id="resultStatus" class="status-badge status-en-revision">
                             <span class="material-symbols-outlined text-sm" style="font-variation-settings: 'FILL' 1;">pending</span>

@@ -348,7 +348,7 @@ class Inicio extends BaseController
         $this->denunciasModel->skipValidation(true)->insert($dataDenuncia);
         $id = $db->insertID();
 
-        $folio = 'DGIV.DA-' . date('Y') . '-' . str_pad((string) $id, 4, '0', STR_PAD_LEFT);
+        $folio = 'SMADSOT.SAQDE-' . str_pad((string) $id, 4, '0', STR_PAD_LEFT). '/'. date('Y');
         $this->denunciasModel->update($id, ['folio' => $folio]);
 
         // Log para debug: Verificar que el estatus se guardó correctamente
