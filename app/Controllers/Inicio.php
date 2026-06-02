@@ -803,7 +803,7 @@ class Inicio extends BaseController
 
         $email->setFrom(
             getenv('email.fromEmail') ?: 'noreply@denuncias-ambientales.gob.mx',
-            'Sistema de Denuncias Ambientales - SMAOT'
+            'Sistema de Denuncias Ambientales'
         );
 
         $email->setTo($denuncia['email']);
