@@ -100,6 +100,7 @@
         </div>
     </div>
 </div>
+    </main>
 
 <!-- Modales -->
 <?= view('admin/components/modal_detalle') ?>

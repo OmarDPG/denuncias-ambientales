@@ -235,6 +235,7 @@ $totalInspecciones = $totalActivas + $totalConcluidas;
         </div>
     </div>
 </div>
+    </main>
 
 <!-- JavaScript para manejo de pestañas -->
 <script>

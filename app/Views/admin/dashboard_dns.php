@@ -291,6 +291,7 @@ $totalSanciones = isset($enSancion) ? count($enSancion) : 0;
         </div>
     </div>
 </div>
+    </main>
 
 <!-- JavaScript para manejo de pestañas -->
 <script>
