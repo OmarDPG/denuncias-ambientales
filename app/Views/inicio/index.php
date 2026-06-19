@@ -268,6 +268,55 @@
                                 </select>
                             </div>
 
+                            <!-- Motivo de Verificación (solo para tipo 7) -->
+                            <div id="motivoVerificacionContainer" class="space-y-2" style="display: none;">
+                                <label class="font-headline font-bold text-sm text-primary uppercase tracking-wider">Motivo de Verificación</label>
+                                <select id="motivoVerificacion" name="id_motivo_verificacion"
+                                    class="w-full bg-surface-container-low border-0 border-b-2 border-outline-variant/40 focus:border-primary focus:ring-0 py-3 text-on-surface font-body">
+                                    <option value="">Seleccione el motivo...</option>
+                                </select>
+                            </div>
+
+                            <!-- Datos del Vehículo (solo para tipo 7) -->
+                            <div id="datosVehiculoContainer" class="space-y-6" style="display: none;">
+                                <div class="space-y-1">
+                                    <h3 class="font-headline font-bold text-xl text-primary">Datos del Vehículo Denunciado</h3>
+                                    <p class="text-sm text-secondary">Información del vehículo relacionado con la denuncia.</p>
+                                </div>
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    <div class="space-y-2">
+                                        <label class="font-headline font-bold text-sm text-primary uppercase tracking-wider">Placa <span class="text-error">*</span></label>
+                                        <input id="vehiculoPlaca" name="vehiculo_placa" type="text"
+                                            class="w-full bg-surface-container-low border-0 border-b-2 border-outline-variant/40 focus:border-primary focus:ring-0 py-3 text-on-surface font-body"
+                                            placeholder="ABC-123-XYZ" maxlength="7" style="text-transform: uppercase;" oninput="this.value = this.value.toUpperCase()" />
+                                    </div>
+                                    <div class="space-y-2">
+                                        <label class="font-headline font-bold text-sm text-primary uppercase tracking-wider">Marca <span class="text-error">*</span></label>
+                                        <input id="vehiculoMarca" name="vehiculo_marca" type="text"
+                                            class="w-full bg-surface-container-low border-0 border-b-2 border-outline-variant/40 focus:border-primary focus:ring-0 py-3 text-on-surface font-body"
+                                            placeholder="Ej: TOYOTA, FORD, NISSAN" maxlength="100" style="text-transform: uppercase;" oninput="this.value = this.value.toUpperCase()" />
+                                    </div>
+                                    <div class="space-y-2">
+                                        <label class="font-headline font-bold text-sm text-primary uppercase tracking-wider">Modelo <span class="text-error">*</span></label>
+                                        <input id="vehiculoModelo" name="vehiculo_modelo" type="text"
+                                            class="w-full bg-surface-container-low border-0 border-b-2 border-outline-variant/40 focus:border-primary focus:ring-0 py-3 text-on-surface font-body"
+                                            placeholder="Ej: 2023, 2024" maxlength="4" inputmode="numeric" oninput="this.value = this.value.replace(/[^0-9]/g, '').slice(0, 4)" />
+                                    </div>
+                                    <div class="space-y-2">
+                                        <label class="font-headline font-bold text-sm text-primary uppercase tracking-wider">Color <span class="text-error">*</span></label>
+                                        <input id="vehiculoColor" name="vehiculo_color" type="text"
+                                            class="w-full bg-surface-container-low border-0 border-b-2 border-outline-variant/40 focus:border-primary focus:ring-0 py-3 text-on-surface font-body"
+                                            placeholder="Ej: ROJO, AZUL, BLANCO" maxlength="50" style="text-transform: uppercase;" oninput="this.value = this.value.toUpperCase()" />
+                                    </div>
+                                    <div class="space-y-2 md:col-span-2">
+                                        <label class="font-headline font-bold text-sm text-primary uppercase tracking-wider">Submarca (Opcional)</label>
+                                        <input id="vehiculoSubmarca" name="vehiculo_submarca" type="text"
+                                            class="w-full bg-surface-container-low border-0 border-b-2 border-outline-variant/40 focus:border-primary focus:ring-0 py-3 text-on-surface font-body"
+                                            placeholder="Ej: COROLLA, FOCUS, SENTRA" maxlength="100" style="text-transform: uppercase;" oninput="this.value = this.value.toUpperCase()" />
+                                    </div>
+                                </div>
+                            </div>
+
                             <!-- Hechos Denunciados -->
                             <div class="space-y-2">
                                 <div class="flex justify-between items-center">
@@ -284,31 +333,33 @@
                             </div>
 
                             <!-- Ubicación por Coordenada -->
-                            <div class="flex justify-between items-end">
-                                <div class="space-y-1">
-                                    <h3 class="font-headline font-bold text-xl text-primary">Ubicación Precisa</h3>
-                                    <p class="text-sm text-secondary">Marca las coordenadas exactas del impacto ambiental.</p>
+                            <div id="ubicacionPrecisaSection">
+                                <div class="flex justify-between items-end">
+                                    <div class="space-y-1">
+                                        <h3 class="font-headline font-bold text-xl text-primary">Ubicación Precisa</h3>
+                                        <p class="text-sm text-secondary">Marca las coordenadas exactas del impacto ambiental.</p>
+                                    </div>
+                                    <button onclick="getCurrentLocation()"
+                                        class="text-primary font-bold text-xs flex items-center gap-1 hover:underline" type="button">
+                                        <span class="material-symbols-outlined text-sm" data-icon="my_location">my_location</span>
+                                        USAR POSICIÓN ACTUAL
+                                    </button>
                                 </div>
-                                <button onclick="getCurrentLocation()"
-                                    class="text-primary font-bold text-xs flex items-center gap-1 hover:underline" type="button">
-                                    <span class="material-symbols-outlined text-sm" data-icon="my_location">my_location</span>
-                                    USAR POSICIÓN ACTUAL
-                                </button>
-                            </div>
-                            <div id="mapContainer"
-                                class="map-container aspect-[21/9] w-full bg-surface-container rounded-xl overflow-hidden relative border border-outline-variant/20">
-                                <div id="map" class="w-full h-full"></div>
-                            </div>
-                            <div class="grid grid-cols-2 gap-4 text-sm">
-                                <div>
-                                    <label class="text-secondary font-bold">Latitud:</label>
-                                    <input id="latitude" type="text" readonly
-                                        class="w-full bg-surface-container-low rounded px-3 py-2 mt-1" placeholder="Haga clic en el mapa" />
+                                <div id="mapContainer"
+                                    class="map-container aspect-[21/9] w-full bg-surface-container rounded-xl overflow-hidden relative border border-outline-variant/20">
+                                    <div id="map" class="w-full h-full"></div>
                                 </div>
-                                <div>
-                                    <label class="text-secondary font-bold">Longitud:</label>
-                                    <input id="longitude" type="text" readonly
-                                        class="w-full bg-surface-container-low rounded px-3 py-2 mt-1" placeholder="Haga clic en el mapa" />
+                                <div class="grid grid-cols-2 gap-4 text-sm">
+                                    <div>
+                                        <label class="text-secondary font-bold">Latitud:</label>
+                                        <input id="latitude" type="text" readonly
+                                            class="w-full bg-surface-container-low rounded px-3 py-2 mt-1" placeholder="Haga clic en el mapa" />
+                                    </div>
+                                    <div>
+                                        <label class="text-secondary font-bold">Longitud:</label>
+                                        <input id="longitude" type="text" readonly
+                                            class="w-full bg-surface-container-low rounded px-3 py-2 mt-1" placeholder="Haga clic en el mapa" />
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -323,7 +374,7 @@
                                 </div>
 
                                 <!-- Nombre Completo del Denunciado -->
-                                <div class="space-y-2">
+                                <div id="denunciadoNombreContainer" class="space-y-2">
                                     <label class="font-headline font-bold text-sm text-primary uppercase tracking-wider">Nombre Completo
                                         del Denunciado</label>
                                     <input id="nombreDenunciado" type="text" required
@@ -334,6 +385,7 @@
                                 </div>
 
                                 <!-- Checkbox: ¿Es Persona Moral? -->
+                                <div id="denunciadoMoralContainer">
                                 <div class="space-y-4 p-6 bg-surface-container-low/50 rounded-xl border border-outline-variant/20">
                                     <div class="flex items-center gap-3">
                                         <input id="denunciadoEsMoral" type="checkbox" onchange="toggleDenunciadoMoralFields()"
@@ -354,8 +406,10 @@
                                         </div>
                                     </div>
                                 </div>
+                                </div>
 
                                 <!-- Dirección del Denunciado -->
+                                <div id="denunciadoDireccionContainer">
                                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                                     <div class="space-y-2">
                                         <label
@@ -403,6 +457,7 @@
                                             class="w-full bg-surface-container-low border-0 border-b-2 border-outline-variant/40 focus:border-primary focus:ring-0 py-3 text-on-surface font-body"
                                             placeholder="Núm. Int. (opcional)" />
                                     </div>
+                                </div>
                                 </div>
                             </div>
 
@@ -677,6 +732,37 @@
                             <p class="text-xs text-secondary uppercase tracking-wider">Centro de Verificación</p>
                             <p id="prev_centroVerificacion" class="font-medium text-on-surface"></p>
                         </div>
+                        <div id="prev_motivoContainer" style="display: none;">
+                            <p class="text-xs text-secondary uppercase tracking-wider">Motivo de Verificación</p>
+                            <p id="prev_motivoVerificacion" class="font-medium text-on-surface"></p>
+                        </div>
+                    </div>
+
+                    <!-- Datos del Vehículo (solo para tipo 7) -->
+                    <div id="prev_vehiculoContainer" class="border-t border-outline-variant/20 pt-4" style="display: none;">
+                        <p class="text-xs text-secondary uppercase tracking-wider mb-3">Datos del Vehículo</p>
+                        <div class="grid grid-cols-2 md:grid-cols-3 gap-4">
+                            <div>
+                                <p class="text-xs text-secondary">Placa</p>
+                                <p id="prev_vehiculoPlaca" class="font-medium text-on-surface"></p>
+                            </div>
+                            <div>
+                                <p class="text-xs text-secondary">Marca</p>
+                                <p id="prev_vehiculoMarca" class="font-medium text-on-surface"></p>
+                            </div>
+                            <div>
+                                <p class="text-xs text-secondary">Modelo</p>
+                                <p id="prev_vehiculoModelo" class="font-medium text-on-surface"></p>
+                            </div>
+                            <div>
+                                <p class="text-xs text-secondary">Color</p>
+                                <p id="prev_vehiculoColor" class="font-medium text-on-surface"></p>
+                            </div>
+                            <div>
+                                <p class="text-xs text-secondary">Submarca</p>
+                                <p id="prev_vehiculoSubmarca" class="font-medium text-on-surface"></p>
+                            </div>
+                        </div>
                     </div>
 
                     <div class="border-t border-outline-variant/20 pt-4">
@@ -684,8 +770,8 @@
                         <p id="prev_hechosDenunciados" class="text-sm text-on-surface leading-relaxed whitespace-pre-wrap"></p>
                     </div>
 
-                    <div class="border-t border-outline-variant/20 pt-4">
-                        <p class="text-xs text-secondary uppercase tracking-wider mb-2">Ubicación</p>
+                    <div id="prev_ubicacionContainer" class="border-t border-outline-variant/20 pt-4">
+                        <p class="text-xs text-secondary uppercase tracking-wider mb-2">Ubicación <span id="prev_ubicacionOpcional" class="text-xs font-normal normal-case">(Opcional)</span></p>
                         <div class="grid grid-cols-2 gap-4">
                             <div>
                                 <p class="text-xs text-secondary">Latitud</p>
@@ -703,7 +789,7 @@
                 <div class="bg-surface-container-low rounded-xl p-6 space-y-4">
                     <div class="flex items-center gap-3 mb-4">
                         <span class="material-symbols-outlined text-primary text-2xl" data-icon="gavel">gavel</span>
-                        <h3 class="font-headline font-bold text-xl text-primary">Datos del Denunciado</h3>
+                        <h3 class="font-headline font-bold text-xl text-primary">Datos del Denunciado <span id="prev_denunciadoOpcional" class="text-sm font-normal text-secondary" style="display: none;">(Opcional)</span></h3>
                     </div>
                     
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -717,7 +803,7 @@
                         </div>
                     </div>
 
-                    <div class="border-t border-outline-variant/20 pt-4">
+                    <div id="prev_direccionDenunciadoContainer" class="border-t border-outline-variant/20 pt-4">
                         <p class="text-xs text-secondary uppercase tracking-wider mb-2">Dirección del Denunciado</p>
                         <p id="prev_direccionDenunciado" class="font-medium text-on-surface"></p>
                     </div>
@@ -928,26 +1014,36 @@
             const temaDenunciaSelect = document.getElementById('temaDenuncia');
             const centroVerificacionContainer = document.getElementById('centroVerificacionContainer');
             const centroVerificacionSelect = document.getElementById('centroVerificacion');
+            const motivoVerificacionContainer = document.getElementById('motivoVerificacionContainer');
+            const datosVehiculoContainer = document.getElementById('datosVehiculoContainer');
+            const ubicacionPrecisaSection = document.getElementById('ubicacionPrecisaSection');
 
             // Limpiar selects
             temaDenunciaSelect.innerHTML = '<option value="">Seleccione el tema...</option>';
             centroVerificacionSelect.innerHTML = '<option value="">Seleccione el centro de verificación...</option>';
             
-            // Ocultar ambos contenedores inicialmente
+            // Ocultar todos los contenedores inicialmente
             temaDenunciaContainer.style.display = 'none';
             centroVerificacionContainer.style.display = 'none';
+            motivoVerificacionContainer.style.display = 'none';
+            datosVehiculoContainer.style.display = 'none';
             
-            // Remover requerido de ambos campos
+            // Remover requerido de todos los campos
             temaDenunciaSelect.removeAttribute('required');
             centroVerificacionSelect.removeAttribute('required');
 
             if (!idTipoDenuncia) {
+                // Restaurar vista normal si no hay tipo seleccionado
+                ubicacionPrecisaSection.style.display = 'block';
+                configurarPaso3Vehicular(false);
+                setRequiredVehiculo(false);
                 return;
             }
 
-            // Si es tipo 7 (Centros de verificación vehicular), cargar centros
+            // Si es tipo 7 (Centros de verificación vehicular)
             if (idTipoDenuncia === '7') {
                 try {
+                    // Cargar centros de verificación
                     const response = await fetch('<?= base_url('inicio/getCentrosVerificacion') ?>');
                     const result = await response.json();
                     
@@ -964,6 +1060,22 @@
                 } catch (error) {
                     console.error('Error al cargar centros de verificación:', error);
                 }
+
+                // Cargar motivos de verificación
+                await cargarMotivosVerificacion();
+                
+                // Mostrar campos de vehículo
+                datosVehiculoContainer.style.display = 'block';
+                setRequiredVehiculo(true);
+                
+                // Ocultar ubicación precisa
+                ubicacionPrecisaSection.style.display = 'none';
+                document.getElementById('latitude').removeAttribute('required');
+                document.getElementById('longitude').removeAttribute('required');
+                
+                // Configurar Paso 3 para modo vehicular
+                configurarPaso3Vehicular(true);
+                
             } else {
                 // Para otros tipos, cargar temas
                 try {
@@ -983,6 +1095,117 @@
                 } catch (error) {
                     console.error('Error al cargar temas de denuncia:', error);
                 }
+
+                // Mostrar ubicación precisa
+                ubicacionPrecisaSection.style.display = 'block';
+                
+                // Ocultar campos vehiculares
+                datosVehiculoContainer.style.display = 'none';
+                motivoVerificacionContainer.style.display = 'none';
+                setRequiredVehiculo(false);
+                
+                // Restaurar Paso 3 normal
+                configurarPaso3Vehicular(false);
+            }
+        }
+
+        // ─── Cargar motivos de verificación ──────────────────────────────────────────
+        async function cargarMotivosVerificacion() {
+            const select = document.getElementById('motivoVerificacion');
+            const container = document.getElementById('motivoVerificacionContainer');
+            
+            try {
+                const response = await fetch('<?= base_url('inicio/getMotivosVerificacion') ?>');
+                const result = await response.json();
+                
+                if (result.success && result.data.length > 0) {
+                    select.innerHTML = '<option value="">Seleccione el motivo...</option>';
+                    result.data.forEach(motivo => {
+                        const option = document.createElement('option');
+                        option.value = motivo.id_motivo_verificacion;
+                        option.textContent = motivo.descripcion;
+                        select.appendChild(option);
+                    });
+                    container.style.display = 'block';
+                    select.setAttribute('required', 'required');
+                }
+            } catch (error) {
+                console.error('Error al cargar motivos de verificación:', error);
+            }
+        }
+
+        // ─── Configurar Paso 3 según modo vehicular ──────────────────────────────────
+        function configurarPaso3Vehicular(esVehicular) {
+            const nombreInput = document.getElementById('nombreDenunciado');
+            const moralContainer = document.getElementById('denunciadoMoralContainer');
+            const direccionContainer = document.getElementById('denunciadoDireccionContainer');
+            
+            if (esVehicular) {
+                // Modo vehicular: solo nombre (opcional)
+                nombreInput.removeAttribute('required');
+                nombreInput.placeholder = 'Nombre del conductor (opcional)';
+                
+                // Ocultar checkbox moral y dirección
+                if (moralContainer) moralContainer.style.display = 'none';
+                if (direccionContainer) direccionContainer.style.display = 'none';
+                
+                // Remover required de campos de dirección
+                const camposDireccion = [
+                    'municipioDenunciado', 
+                    'coloniaDenunciado', 
+                    'calleDenunciado', 
+                    'codigoPostalDenunciado', 
+                    'numeroExteriorDenunciado'
+                ];
+                camposDireccion.forEach(id => {
+                    const campo = document.getElementById(id);
+                    if (campo) campo.removeAttribute('required');
+                });
+                
+            } else {
+                // Modo normal: restaurar comportamiento original
+                nombreInput.setAttribute('required', 'required');
+                nombreInput.placeholder = 'Ingrese nombre o "Quien resulte responsable"';
+                
+                if (moralContainer) moralContainer.style.display = 'block';
+                if (direccionContainer) direccionContainer.style.display = 'block';
+                
+                // Restaurar required en campos de dirección
+                const camposDireccion = [
+                    'municipioDenunciado', 
+                    'coloniaDenunciado', 
+                    'calleDenunciado', 
+                    'codigoPostalDenunciado', 
+                    'numeroExteriorDenunciado'
+                ];
+                camposDireccion.forEach(id => {
+                    const campo = document.getElementById(id);
+                    if (campo) campo.setAttribute('required', 'required');
+                });
+            }
+        }
+
+        // ─── Establecer campos de vehículo como requeridos ───────────────────────────
+        function setRequiredVehiculo(requerido) {
+            const campos = ['vehiculoPlaca', 'vehiculoMarca', 'vehiculoModelo', 'vehiculoColor'];
+            
+            campos.forEach(id => {
+                const campo = document.getElementById(id);
+                if (campo) {
+                    if (requerido) {
+                        campo.setAttribute('required', 'required');
+                    } else {
+                        campo.removeAttribute('required');
+                        campo.value = '';
+                    }
+                }
+            });
+            
+            // Submarca siempre opcional
+            const submarca = document.getElementById('vehiculoSubmarca');
+            if (submarca) {
+                submarca.removeAttribute('required');
+                if (!requerido) submarca.value = '';
             }
         }
     </script>

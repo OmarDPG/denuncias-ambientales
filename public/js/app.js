@@ -27,6 +27,12 @@ let formData = {
     hechosDenunciados: '',
     latitude: null,
     longitude: null,
+    idMotivoVerificacion: '',
+    vehiculoPlaca: '',
+    vehiculoMarca: '',
+    vehiculoModelo: '',
+    vehiculoColor: '',
+    vehiculoSubmarca: '',
     nombreDenunciado: '',
     denunciadoEsMoral: false,
     razonSocialDenunciado: '',
@@ -229,6 +235,35 @@ function validateCurrentStep() {
             }
             formData.claveCvv = claveCvv;
             formData.idTemaDenuncia = ''; // Limpiar tema si es tipo 7
+            
+            // Validar motivo de verificación
+            const motivoVerificacion = document.getElementById('motivoVerificacion').value;
+            if (!motivoVerificacion) {
+                alert('Por favor seleccione un motivo de verificación');
+                return false;
+            }
+            formData.idMotivoVerificacion = motivoVerificacion;
+            
+            // Validar datos del vehículo
+            const vehiculoPlaca = document.getElementById('vehiculoPlaca').value;
+            const vehiculoMarca = document.getElementById('vehiculoMarca').value;
+            const vehiculoModelo = document.getElementById('vehiculoModelo').value;
+            const vehiculoColor = document.getElementById('vehiculoColor').value;
+            const vehiculoSubmarca = document.getElementById('vehiculoSubmarca').value;
+            
+            if (!vehiculoPlaca || !vehiculoMarca || !vehiculoModelo || !vehiculoColor) {
+                alert('Por favor complete todos los campos requeridos del vehículo');
+                return false;
+            }
+            
+            formData.vehiculoPlaca = vehiculoPlaca;
+            formData.vehiculoMarca = vehiculoMarca;
+            formData.vehiculoModelo = vehiculoModelo;
+            formData.vehiculoColor = vehiculoColor;
+            formData.vehiculoSubmarca = vehiculoSubmarca;
+            
+            // Para verificación vehicular, la ubicación es OPCIONAL
+            // No validar latitud/longitud
         } else {
             // Para otros tipos, validar tema de denuncia
             const temaDenuncia = document.getElementById('temaDenuncia').value;
@@ -238,12 +273,12 @@ function validateCurrentStep() {
             }
             formData.idTemaDenuncia = temaDenuncia;
             formData.claveCvv = ''; // Limpiar centro si no es tipo 7
-        }
-
-        // Validar ubicación
-        if (!formData.latitude || !formData.longitude) {
-            alert('Por favor seleccione una ubicación en el mapa');
-            return false;
+            
+            // Para otros tipos, la ubicación es REQUERIDA
+            if (!formData.latitude || !formData.longitude) {
+                alert('Por favor seleccione una ubicación en el mapa');
+                return false;
+            }
         }
 
         // Guardar datos en formData
@@ -253,7 +288,9 @@ function validateCurrentStep() {
         formData.tipoDenuncia = tipoDenunciaSelect.options[tipoDenunciaSelect.selectedIndex].text;
         formData.hechosDenunciados = hechosDenunciados;
     } else if (currentStep === 3) {
-        // Validar campos del denunciado
+        // Validar campos del denunciado según el tipo de denuncia
+        const esVerificacionVehicular = (formData.idTipoDenuncia === '7');
+        
         const nombreDenunciado = document.getElementById('nombreDenunciado').value;
         const municipioDenunciado = document.getElementById('municipioDenunciado').value;
         const coloniaDenunciado = document.getElementById('coloniaDenunciado').value;
@@ -261,10 +298,16 @@ function validateCurrentStep() {
         const codigoPostalDenunciado = document.getElementById('codigoPostalDenunciado').value;
         const numeroExteriorDenunciado = document.getElementById('numeroExteriorDenunciado').value;
 
-        if (!nombreDenunciado || !municipioDenunciado || !coloniaDenunciado ||
-            !calleDenunciado || !codigoPostalDenunciado || !numeroExteriorDenunciado) {
-            alert('Por favor complete todos los campos requeridos del denunciado');
-            return false;
+        if (esVerificacionVehicular) {
+            // Para verificación vehicular, los campos del denunciado son OPCIONALES
+            // Solo guardar los datos sin validar
+        } else {
+            // Para otros tipos, todos los campos del denunciado son REQUERIDOS
+            if (!nombreDenunciado || !municipioDenunciado || !coloniaDenunciado ||
+                !calleDenunciado || !codigoPostalDenunciado || !numeroExteriorDenunciado) {
+                alert('Por favor complete todos los campos requeridos del denunciado');
+                return false;
+            }
         }
 
         // Validar campo razón social si es persona moral
@@ -323,6 +366,8 @@ function showPreviewModal() {
 }
 
 function populatePreviewModal() {
+    const esVerificacionVehicular = (formData.idTipoDenuncia === '7');
+    
     // Sección 1: Datos del Denunciante
     document.getElementById('prev_tipoPersona').textContent = formData.tipoPersona === 'fisica' ? 'Persona Física' : 'Persona Moral';
     document.getElementById('prev_nombreCompleto').textContent = formData.nombreCompleto;
@@ -363,14 +408,21 @@ function populatePreviewModal() {
     document.getElementById('prev_tipoDenuncia').textContent = formData.tipoDenuncia;
 
     // Tema o Centro de Verificación
-    if (formData.idTipoDenuncia === '7') {
+    if (esVerificacionVehicular) {
         document.getElementById('prev_temaContainer').style.display = 'none';
         document.getElementById('prev_cvvContainer').style.display = 'block';
+        document.getElementById('prev_motivoContainer').style.display = 'block';
+        
         const cvvSelect = document.getElementById('centroVerificacion');
         const cvvText = cvvSelect.options[cvvSelect.selectedIndex]?.text || 'N/A';
         document.getElementById('prev_centroVerificacion').textContent = cvvText;
+        
+        const motivoSelect = document.getElementById('motivoVerificacion');
+        const motivoText = motivoSelect.options[motivoSelect.selectedIndex]?.text || 'N/A';
+        document.getElementById('prev_motivoVerificacion').textContent = motivoText;
     } else {
         document.getElementById('prev_cvvContainer').style.display = 'none';
+        document.getElementById('prev_motivoContainer').style.display = 'none';
         document.getElementById('prev_temaContainer').style.display = 'block';
         const temaSelect = document.getElementById('temaDenuncia');
         const temaText = temaSelect.options[temaSelect.selectedIndex]?.text || 'N/A';
@@ -378,11 +430,55 @@ function populatePreviewModal() {
     }
 
     document.getElementById('prev_hechosDenunciados').textContent = formData.hechosDenunciados;
-    document.getElementById('prev_latitud').textContent = formData.latitude ? parseFloat(formData.latitude).toFixed(6) : 'N/A';
-    document.getElementById('prev_longitud').textContent = formData.longitude ? parseFloat(formData.longitude).toFixed(6) : 'N/A';
+    
+    // Datos del Vehículo (solo para tipo 7)
+    if (esVerificacionVehicular) {
+        document.getElementById('prev_vehiculoContainer').style.display = 'block';
+        document.getElementById('prev_vehiculoPlaca').textContent = formData.vehiculoPlaca || 'N/A';
+        document.getElementById('prev_vehiculoMarca').textContent = formData.vehiculoMarca || 'N/A';
+        document.getElementById('prev_vehiculoModelo').textContent = formData.vehiculoModelo || 'N/A';
+        document.getElementById('prev_vehiculoColor').textContent = formData.vehiculoColor || 'N/A';
+        document.getElementById('prev_vehiculoSubmarca').textContent = formData.vehiculoSubmarca || 'No especificada';
+    } else {
+        document.getElementById('prev_vehiculoContainer').style.display = 'none';
+    }
+    
+    // Ubicación (opcional para tipo 7)
+    if (esVerificacionVehicular) {
+        document.getElementById('prev_ubicacionOpcional').style.display = 'inline';
+        document.getElementById('prev_latitud').textContent = formData.latitude ? parseFloat(formData.latitude).toFixed(6) : 'No proporcionada';
+        document.getElementById('prev_longitud').textContent = formData.longitude ? parseFloat(formData.longitude).toFixed(6) : 'No proporcionada';
+    } else {
+        document.getElementById('prev_ubicacionOpcional').style.display = 'none';
+        document.getElementById('prev_latitud').textContent = formData.latitude ? parseFloat(formData.latitude).toFixed(6) : 'N/A';
+        document.getElementById('prev_longitud').textContent = formData.longitude ? parseFloat(formData.longitude).toFixed(6) : 'N/A';
+    }
 
     // Sección 3: Datos del Denunciado
-    document.getElementById('prev_nombreDenunciado').textContent = formData.nombreDenunciado;
+    if (esVerificacionVehicular) {
+        document.getElementById('prev_denunciadoOpcional').style.display = 'inline';
+        // Mostrar datos si existen, sino mostrar "No proporcionado"
+        document.getElementById('prev_nombreDenunciado').textContent = formData.nombreDenunciado || 'No proporcionado';
+        
+        if (formData.nombreDenunciado) {
+            // Solo mostrar dirección si hay nombre
+            const direccionDenunciado = formData.calleDenunciado ? 
+                `${formData.calleDenunciado} ${formData.numeroExteriorDenunciado}${formData.numeroInteriorDenunciado ? ' Int. ' + formData.numeroInteriorDenunciado : ''}, Col. ${formData.coloniaDenunciado}, ${formData.municipioDenunciado}. CP: ${formData.codigoPostalDenunciado}` 
+                : 'No proporcionada';
+            document.getElementById('prev_direccionDenunciado').textContent = direccionDenunciado;
+            document.getElementById('prev_direccionDenunciadoContainer').style.display = 'block';
+        } else {
+            document.getElementById('prev_direccionDenunciadoContainer').style.display = 'none';
+        }
+    } else {
+        document.getElementById('prev_denunciadoOpcional').style.display = 'none';
+        document.getElementById('prev_nombreDenunciado').textContent = formData.nombreDenunciado;
+        document.getElementById('prev_direccionDenunciadoContainer').style.display = 'block';
+        
+        // Dirección del denunciado
+        const direccionDenunciado = `${formData.calleDenunciado} ${formData.numeroExteriorDenunciado}${formData.numeroInteriorDenunciado ? ' Int. ' + formData.numeroInteriorDenunciado : ''}, Col. ${formData.coloniaDenunciado}, ${formData.municipioDenunciado}. CP: ${formData.codigoPostalDenunciado}`;
+        document.getElementById('prev_direccionDenunciado').textContent = direccionDenunciado;
+    }
 
     if (formData.denunciadoEsMoral) {
         document.getElementById('prev_denunciadoMoralContainer').style.display = 'block';
@@ -390,10 +486,6 @@ function populatePreviewModal() {
     } else {
         document.getElementById('prev_denunciadoMoralContainer').style.display = 'none';
     }
-
-    // Dirección del denunciado
-    const direccionDenunciado = `${formData.calleDenunciado} ${formData.numeroExteriorDenunciado}${formData.numeroInteriorDenunciado ? ' Int. ' + formData.numeroInteriorDenunciado : ''}, Col. ${formData.coloniaDenunciado}, ${formData.municipioDenunciado}. CP: ${formData.codigoPostalDenunciado}`;
-    document.getElementById('prev_direccionDenunciado').textContent = direccionDenunciado;
 
     // Sección 4: Evidencias
     if (uploadedFiles.length > 0) {
@@ -487,6 +579,14 @@ function confirmAndSubmit() {
     fd.append('hechos_denunciados', formData.hechosDenunciados);
     fd.append('latitud',            formData.latitude  ?? '');
     fd.append('longitud',           formData.longitude ?? '');
+    
+    // Datos de verificación vehicular (si aplica)
+    fd.append('id_motivo_verificacion', formData.idMotivoVerificacion || '');
+    fd.append('vehiculo_placa',         formData.vehiculoPlaca || '');
+    fd.append('vehiculo_marca',         formData.vehiculoMarca || '');
+    fd.append('vehiculo_modelo',        formData.vehiculoModelo || '');
+    fd.append('vehiculo_color',         formData.vehiculoColor || '');
+    fd.append('vehiculo_submarca',      formData.vehiculoSubmarca || '');
 
     // Paso 3 – Denunciado
     fd.append('nombre_denunciado',          formData.nombreDenunciado);

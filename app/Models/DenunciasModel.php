@@ -37,6 +37,7 @@ class DenunciasModel extends Model
         'nombre_representante',
         'id_tipo_denuncia',
         'id_tema_denuncia',
+        'id_motivo_verificacion',
         'tipo_denuncia',
         'hechos_denunciados',
         'latitud',
@@ -55,7 +56,24 @@ class DenunciasModel extends Model
         'codigo_verificacion_expira',
         'intentos_verificacion',
         'verificado_en',
-        'ultimo_envio_codigo'
+        'ultimo_envio_codigo',
+        // Nuevos campos de flujo operativo
+        'id_area_responsable',
+        'id_estado_actual',
+        'id_usuario_asignado',
+        'fecha_ultimo_cambio_estado',
+        'fecha_turnado_dns',
+        'fecha_turnado_ds',
+        'fecha_aprobacion_dns',
+        'fecha_inicio_inspeccion',
+        'fecha_fin_inspeccion',
+        'fecha_sancion',
+        'prioridad',
+        'flujo_excepcional',
+        'razon_flujo_excepcional',
+        'id_motivo_rechazo',
+        'id_tipo_sancion',
+        'monto_sancion'
     ];
 
     protected $useTimestamps = false;

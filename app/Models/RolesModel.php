@@ -4,17 +4,23 @@ namespace App\Models;
 
 use CodeIgniter\Model;
 
-class AdminModel extends Model
+class RolesModel extends Model
 {
-    protected $table      = 'admin';
-    protected $primaryKey = 'id_adm';
-
+    protected $table      = 'roles';
+    protected $primaryKey = 'id_rol';
     protected $useAutoIncrement = true;
 
     protected $returnType     = 'array';
     protected $useSoftDeletes = false;
 
-    protected $allowedFields = ['id_adm', 'email', 'usuario', 'password', 'nombre', 'apellidoP', 'apellidoM', 'expediente', 'fecha_alta', 'fecha_ultima', 'activo', 'adm', 'id_rol', 'id_area'];
+    protected $allowedFields = [
+        'id_rol',
+        'codigo',
+        'nombre',
+        'descripcion',
+        'nivel_acceso',
+        'activo'
+    ];
 
     protected $useTimestamps = false;
 

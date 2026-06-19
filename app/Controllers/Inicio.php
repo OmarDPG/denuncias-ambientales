@@ -7,6 +7,8 @@ use App\Models\DenunciasModel;
 use App\Models\CentroVerificacionModel;
 use App\Models\TemaDenunciaModel;
 use App\Models\TipoDenunciaModel;
+use App\Models\MotivoVerificacionModel;
+use App\Models\VehiculosModel;
 
 class Inicio extends BaseController
 {
@@ -15,6 +17,8 @@ class Inicio extends BaseController
     protected CentroVerificacionModel $centroVerificacionModel;
     protected TemaDenunciaModel $temaDenunciaModel;
     protected TipoDenunciaModel $tipoDenunciaModel;
+    protected MotivoVerificacionModel $motivoVerificacionModel;
+    protected VehiculosModel $vehiculosModel;
 
     public function __construct()
     {
@@ -23,6 +27,8 @@ class Inicio extends BaseController
         $this->centroVerificacionModel = new CentroVerificacionModel();
         $this->temaDenunciaModel = new TemaDenunciaModel();
         $this->tipoDenunciaModel = new TipoDenunciaModel();
+        $this->motivoVerificacionModel = new MotivoVerificacionModel();
+        $this->vehiculosModel = new VehiculosModel();
     }
 
     public function index()
@@ -71,6 +77,20 @@ class Inicio extends BaseController
         return $this->response->setJSON([
             'success' => true,
             'data' => $centros
+        ]);
+    }
+
+    // ─── API: Obtener motivos de verificación ────────────────────────────────────────
+    public function getMotivosVerificacion(): \CodeIgniter\HTTP\ResponseInterface
+    {
+        $motivos = $this->motivoVerificacionModel
+            ->where('activo', 1)
+            ->orderBy('descripcion', 'ASC')
+            ->findAll();
+
+        return $this->response->setJSON([
+            'success' => true,
+            'data' => $motivos
         ]);
     }
 
@@ -154,6 +174,10 @@ class Inicio extends BaseController
 
         $esRepresentante   = filter_var($this->request->getPost('es_representante'),   FILTER_VALIDATE_BOOLEAN);
         $denunciadoEsMoral = filter_var($this->request->getPost('denunciado_es_moral'), FILTER_VALIDATE_BOOLEAN);
+        
+        // Detectar si es verificación vehicular (tipo 7)
+        $idTipoDenuncia = $this->request->getPost('id_tipo_denuncia');
+        $esVerificacionVehicular = ($idTipoDenuncia === '7');
 
         // ── Reglas de validación ───────────────────────────────────────────────
         $rules = [
@@ -173,16 +197,40 @@ class Inicio extends BaseController
             'id_tema_denuncia'           => ['label' => 'Tema de Denuncia',      'rules' => 'permit_empty|numeric|is_not_unique[tema_denuncia.id_tema_denuncia]'],
             'clave_cvv'                  => ['label' => 'Centro de Verificación', 'rules' => 'permit_empty|max_length[20]|is_not_unique[centros_verificacion_vehicular.clave]'],
             'hechos_denunciados'         => ['label' => 'Hechos Denunciados',    'rules' => 'required|min_length[20]|max_length[10000]'],
-            'latitud'                    => ['label' => 'Latitud',               'rules' => 'permit_empty|decimal'],
-            'longitud'                   => ['label' => 'Longitud',              'rules' => 'permit_empty|decimal'],
-            'nombre_denunciado'          => ['label' => 'Nombre Denunciado',     'rules' => 'required|max_length[255]'],
-            'municipio_denunciado'       => ['label' => 'Municipio Denunciado',  'rules' => 'required|max_length[100]'],
-            'colonia_denunciado'         => ['label' => 'Colonia Denunciada',    'rules' => 'required|max_length[150]'],
-            'calle_denunciado'           => ['label' => 'Calle Denunciada',      'rules' => 'required|max_length[150]'],
-            'codigo_postal_denunciado'   => ['label' => 'C.P. Denunciado',       'rules' => 'required|exact_length[5]|numeric'],
-            'numero_exterior_denunciado' => ['label' => 'N° Ext. Denunciado',    'rules' => 'required|max_length[50]'],
-            'numero_interior_denunciado' => ['label' => 'N° Int. Denunciado',    'rules' => 'permit_empty|max_length[50]'],
         ];
+
+        // ── Validaciones condicionales según tipo de denuncia ──────────────────
+        if ($esVerificacionVehicular) {
+            // Para verificación vehicular: campos de vehículo requeridos
+            $rules['id_motivo_verificacion'] = ['label' => 'Motivo de Verificación', 'rules' => 'required|numeric'];
+            $rules['vehiculo_placa']         = ['label' => 'Placa del Vehículo',     'rules' => 'required|max_length[20]'];
+            $rules['vehiculo_marca']         = ['label' => 'Marca del Vehículo',     'rules' => 'required|max_length[100]'];
+            $rules['vehiculo_modelo']        = ['label' => 'Modelo del Vehículo',    'rules' => 'required|max_length[100]'];
+            $rules['vehiculo_color']         = ['label' => 'Color del Vehículo',     'rules' => 'required|max_length[50]'];
+            $rules['vehiculo_submarca']      = ['label' => 'Submarca del Vehículo',  'rules' => 'permit_empty|max_length[100]'];
+            
+            // Ubicación y datos del denunciado opcionales
+            $rules['latitud']                    = ['label' => 'Latitud',               'rules' => 'permit_empty|decimal'];
+            $rules['longitud']                   = ['label' => 'Longitud',              'rules' => 'permit_empty|decimal'];
+            $rules['nombre_denunciado']          = ['label' => 'Nombre Denunciado',     'rules' => 'permit_empty|max_length[255]'];
+            $rules['municipio_denunciado']       = ['label' => 'Municipio Denunciado',  'rules' => 'permit_empty|max_length[100]'];
+            $rules['colonia_denunciado']         = ['label' => 'Colonia Denunciada',    'rules' => 'permit_empty|max_length[150]'];
+            $rules['calle_denunciado']           = ['label' => 'Calle Denunciada',      'rules' => 'permit_empty|max_length[150]'];
+            $rules['codigo_postal_denunciado']   = ['label' => 'C.P. Denunciado',       'rules' => 'permit_empty|exact_length[5]|numeric'];
+            $rules['numero_exterior_denunciado'] = ['label' => 'N° Ext. Denunciado',    'rules' => 'permit_empty|max_length[50]'];
+            $rules['numero_interior_denunciado'] = ['label' => 'N° Int. Denunciado',    'rules' => 'permit_empty|max_length[50]'];
+        } else {
+            // Para otros tipos: validaciones normales
+            $rules['latitud']                    = ['label' => 'Latitud',               'rules' => 'permit_empty|decimal'];
+            $rules['longitud']                   = ['label' => 'Longitud',              'rules' => 'permit_empty|decimal'];
+            $rules['nombre_denunciado']          = ['label' => 'Nombre Denunciado',     'rules' => 'required|max_length[255]'];
+            $rules['municipio_denunciado']       = ['label' => 'Municipio Denunciado',  'rules' => 'required|max_length[100]'];
+            $rules['colonia_denunciado']         = ['label' => 'Colonia Denunciada',    'rules' => 'required|max_length[150]'];
+            $rules['calle_denunciado']           = ['label' => 'Calle Denunciada',      'rules' => 'required|max_length[150]'];
+            $rules['codigo_postal_denunciado']   = ['label' => 'C.P. Denunciado',       'rules' => 'required|exact_length[5]|numeric'];
+            $rules['numero_exterior_denunciado'] = ['label' => 'N° Ext. Denunciado',    'rules' => 'required|max_length[50]'];
+            $rules['numero_interior_denunciado'] = ['label' => 'N° Int. Denunciado',    'rules' => 'permit_empty|max_length[50]'];
+        }
 
         if ($esRepresentante) {
             $rules['razon_social']         = ['label' => 'Razón Social',          'rules' => 'required|max_length[255]'];
@@ -325,6 +373,7 @@ class Inicio extends BaseController
             'nombre_representante'       => $esRepresentante ? $this->request->getPost('nombre_representante') : null,
             'id_tipo_denuncia'           => $this->request->getPost('id_tipo_denuncia') ?: null,
             'id_tema_denuncia'           => $this->request->getPost('id_tema_denuncia') ?: null,
+            'id_motivo_verificacion'     => $this->request->getPost('id_motivo_verificacion') ?: null,
             'tipo_denuncia'              => $this->obtenerNombreTipoDenuncia($this->request->getPost('id_tipo_denuncia')),
             'hechos_denunciados'         => $this->request->getPost('hechos_denunciados'),
             'latitud'                    => $this->request->getPost('latitud')  ?: null,
@@ -356,9 +405,49 @@ class Inicio extends BaseController
         log_message('info', "Denuncia {$folio} guardada con estatus: '{$denunciaGuardada['estatus']}'");
         log_message('debug', "Código OTP generado para {$folio} (hash): " . substr($codigoHash, 0, 20) . "...");
 
-        foreach ($evidencias as $evidencia) {
+        // ── Guardar datos del vehículo si es verificación vehicular ────────────
+        if ($esVerificacionVehicular) {
+            $dataVehiculo = [
+                'id_denuncia' => $id,
+                'placa'       => $this->request->getPost('vehiculo_placa'),
+                'marca'       => $this->request->getPost('vehiculo_marca'),
+                'modelo'      => $this->request->getPost('vehiculo_modelo'),
+                'color'       => $this->request->getPost('vehiculo_color'),
+                'submarca'    => $this->request->getPost('vehiculo_submarca') ?: null,
+            ];
+            
+            if (!$this->vehiculosModel->insert($dataVehiculo)) {
+                log_message('error', "Error al guardar datos de vehículo para denuncia {$folio}: " . json_encode($this->vehiculosModel->errors()));
+                $db->transRollback();
+                return $this->response->setJSON([
+                    'success' => false,
+                    'errors'  => ['general' => 'Error al guardar datos del vehículo.'],
+                ]);
+            }
+            log_message('info', "Datos de vehículo guardados para denuncia {$folio} - Placa: {$dataVehiculo['placa']}");
+        }
+
+        // ── Guardar evidencias y documentos ────────────────────────────────────
+        log_message('debug', "Procesando " . count($evidencias) . " archivo(s) para denuncia {$folio}");
+        
+        foreach ($evidencias as $index => $evidencia) {
             $evidencia['id_denuncia'] = $id;
-            $this->archivosDenunciasModel->insert($evidencia);
+            
+            log_message('debug', "Insertando evidencia #{$index}: " . json_encode($evidencia));
+            
+            if (!$this->archivosDenunciasModel->insert($evidencia)) {
+                $errores = $this->archivosDenunciasModel->errors();
+                log_message('error', "Error al guardar evidencia #{$index} para denuncia {$folio}: " . json_encode($errores));
+                log_message('error', "Datos de evidencia que falló: " . json_encode($evidencia));
+                $db->transRollback();
+                return $this->response->setJSON([
+                    'success' => false,
+                    'errors'  => ['general' => 'Error al guardar archivos de evidencia. ' . implode(', ', $errores)],
+                ]);
+            }
+            
+            $idEvidencia = $db->insertID();
+            log_message('info', "Evidencia guardada: ID={$idEvidencia}, Archivo={$evidencia['nombre_original']}, Tipo={$evidencia['tipo_documento']}");
         }
 
         $db->transComplete();
@@ -484,6 +573,7 @@ class Inicio extends BaseController
         // ── ✅ Código correcto - Activar denuncia ─────────────────────────────
         $this->denunciasModel->update($denuncia['id_denuncia'], [
             'estatus' => 'Nueva',
+            'id_estado_actual' => 1,
             'verificado_en' => date('Y-m-d H:i:s'),
             'codigo_verificacion' => null,
             'codigo_verificacion_expira' => null,

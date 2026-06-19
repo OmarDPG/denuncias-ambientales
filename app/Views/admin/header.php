@@ -20,6 +20,7 @@
     
     <!-- Scripts -->
     <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <script src="<?php echo base_url('js/admin-actions.js'); ?>"></script>
 
     <!-- <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet"> -->
     <script id="tailwind-config">
@@ -92,6 +93,12 @@
 // Determinar página activa
 $currentPage = $currentPage ?? '';
 
+// Obtener datos de sesión para control de acceso por rol
+$session = session();
+$codigoRol = $session->get('codigo_rol') ?? 'USR_CONSULTA';
+$nivelAcceso = $session->get('nivel_acceso') ?? 3;
+$esAdmin = in_array($codigoRol, ['ADM_GENERAL', 'ADM_DA', 'ADM']);
+
 // Clases CSS para links
 $activeClass = 'flex items-center gap-3 px-4 py-3 text-emerald-900 dark:text-emerald-50 font-semibold bg-white dark:bg-emerald-800/20 rounded-lg transition-all duration-200 hover:translate-x-1 active:opacity-80';
 $inactiveClass = 'flex items-center gap-3 px-4 py-3 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-all duration-200 hover:translate-x-1 active:opacity-80';
@@ -108,24 +115,41 @@ $inactiveClass = 'flex items-center gap-3 px-4 py-3 text-slate-600 dark:text-sla
             </div>
             <!-- Main Navigation Tabs -->
             <nav class="flex flex-col gap-1 flex-1" aria-label="Navegación principal">
+                <!-- Nuevas denuncias - Visible para TODOS -->
                 <a class="<?= $currentPage === 'inicio' ? $activeClass : $inactiveClass ?>"
                     href="<?= base_url('admin/inicio') ?>"
                     <?= $currentPage === 'inicio' ? 'aria-current="page"' : '' ?>>
                     <span class="material-symbols-outlined" data-icon="description">description</span>
-                    <span class="font-inter text-sm antialiased">Reportes Activos</span>
+                    <span class="font-inter text-sm antialiased">Nuevas denuncias</span>
                 </a>
+
+                <!-- Denuncias asignadas - SOLO ADMINISTRADORES -->
+                <?php if ($esAdmin): ?>
+                <a class="<?= $currentPage === 'denuncias-asignadas' ? $activeClass : $inactiveClass ?>"
+                    href="<?= base_url('admin/denuncias-asignadas') ?>"
+                    <?= $currentPage === 'denuncias-asignadas' ? 'aria-current="page"' : '' ?>>
+                    <span class="material-symbols-outlined" data-icon="assignment">assignment</span>
+                    <span class="font-inter text-sm antialiased">Denuncias asignadas</span>
+                </a>
+                <?php endif; ?>
+
+                <!-- Archivo - Visible para TODOS -->
                 <a class="<?= $currentPage === 'archivo' ? $activeClass : $inactiveClass ?>"
                     href="<?= base_url('admin/archivo') ?>"
                     <?= $currentPage === 'archivo' ? 'aria-current="page"' : '' ?>>
                     <span class="material-symbols-outlined" data-icon="inventory_2">inventory_2</span>
                     <span class="font-inter text-sm antialiased">Archivo</span>
                 </a>
+
+                <!-- Gestión de Usuarios - SOLO ADMINISTRADORES -->
+                <?php if ($esAdmin): ?>
                 <a class="<?= $currentPage === 'usuarios' ? $activeClass : $inactiveClass ?>"
                     href="<?= base_url('admin/usuarios') ?>"
                     <?= $currentPage === 'usuarios' ? 'aria-current="page"' : '' ?>>
                     <span class="material-symbols-outlined" data-icon="group">group</span>
                     <span class="font-inter text-sm antialiased">Gestión de Usuarios</span>
                 </a>
+                <?php endif; ?>
                 <!-- <a class="<?= $currentPage === 'configuracion' ? $activeClass : $inactiveClass ?>"
                     href="<?= base_url('admin/configuracion') ?>"
                     <?= $currentPage === 'configuracion' ? 'aria-current="page"' : '' ?>>
@@ -157,7 +181,7 @@ $inactiveClass = 'flex items-center gap-3 px-4 py-3 text-slate-600 dark:text-sla
         <header class="docked full-width top-0 sticky z-50 bg-[#f7f9fb] dark:bg-slate-900/80 backdrop-blur-md">
             <div class="flex justify-between items-center w-full px-8 py-4 max-w-full">
                 <div class="flex items-center gap-8">
-                    <span class="text-2xl font-extrabold text-[#012d1d] dark:text-[#b1f0ce] tracking-tighter">Reportes Activos</span>
+                    <span class="text-2xl font-extrabold text-[#012d1d] dark:text-[#b1f0ce] tracking-tighter">Nuevas Denuncias</span>
                 </div>
                 <div class="flex items-center gap-4">
                     <div class="relative hidden sm:block">

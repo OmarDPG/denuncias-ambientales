@@ -14,7 +14,7 @@ class ArchivosDenunciasModel extends Model
     protected $returnType     = 'array';
     protected $useSoftDeletes = false;
 
-    protected $allowedFields = ['id_evidencia', 'id_denuncia', 'nombre_original', 'ruta_archivo', 'tipo_archivo', 'tipo_documento', 'peso_bytes', 'fecha_subida',];
+    protected $allowedFields = ['id_denuncia', 'nombre_original', 'ruta_archivo', 'tipo_archivo', 'tipo_documento', 'peso_bytes'];
 
     protected $useTimestamps = false;
 

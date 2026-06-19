@@ -4,17 +4,24 @@ namespace App\Models;
 
 use CodeIgniter\Model;
 
-class AdminModel extends Model
+class MotivoVerificacionModel extends Model
 {
-    protected $table      = 'admin';
-    protected $primaryKey = 'id_adm';
+    protected $table      = 'motivo_verificacion';
+    protected $primaryKey = 'id_motivo_verificacion';
 
     protected $useAutoIncrement = true;
 
     protected $returnType     = 'array';
     protected $useSoftDeletes = false;
 
-    protected $allowedFields = ['id_adm', 'email', 'usuario', 'password', 'nombre', 'apellidoP', 'apellidoM', 'expediente', 'fecha_alta', 'fecha_ultima', 'activo', 'adm', 'id_rol', 'id_area'];
+    protected $allowedFields = ['id_motivo_verificacion', 
+    'id_motivo_verificacion', 
+    'descripcion', 
+    'requiere_accion', 
+    'activo', 
+    'created_at', 
+    'updated_at'];
+
 
     protected $useTimestamps = false;
 

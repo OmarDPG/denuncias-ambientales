@@ -24,3 +24,35 @@ h3,
 .material-symbols-outlined {
   font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
 }
+/* ------------------------------------------------------------ */
+/* Estilos para sistema de pestañas en dashboards            */
+/* ------------------------------------------------------------ */
+.tab-button {
+  position: relative;
+  cursor: pointer;
+  user-select: none;
+}
+
+.tab-button:hover {
+  background-color: rgba(var(--md-sys-color-surface-container-highest), 0.5);
+}
+
+.tab-button.active {
+  font-weight: 600;
+}
+
+.tab-panel {
+  animation: fadeIn 0.3s ease-in;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
