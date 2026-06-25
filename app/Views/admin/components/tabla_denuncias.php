@@ -198,7 +198,7 @@ $pager = $pager ?? null;
                                     <?php if (in_array('asignar', $acciones)): ?>
                                     <button class="p-2 text-secondary hover:text-primary transition-colors" 
                                             title="Asignar"
-                                            onclick="openAsignarModal('<?= esc($denuncia['id_denuncia'] ?? '') ?>')">
+                                            onclick="openAsignarModal('<?= esc($denuncia['id_denuncia'] ?? '') ?>', <?= (int)($denuncia['id_area_responsable'] ?? 2) ?>)">
                                         <span class="material-symbols-outlined" data-icon="person_add">person_add</span>
                                     </button>
                                     <?php endif; ?>

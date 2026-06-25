@@ -592,7 +592,19 @@ function renderizarDetalleDenuncia(data) {
     // DETALLES DE LA DENUNCIA
     // ═══════════════════════════════════════════════════════════════════════════
     document.getElementById('detailTipoDenunciaDetalle').textContent = denuncia.nombre_tipo_denuncia || denuncia.tipo_denuncia || 'No especificado';
-    document.getElementById('detailTemaDenuncia').textContent = denuncia.nombre_tema_denuncia || 'No especificado';
+    
+    // Mostrar motivo de verificación si existe (para denuncias de verificación vehicular)
+    // Si no, mostrar tema de denuncia normal
+    if (denuncia.id_motivo_verificacion && denuncia.motivo_verificacion_texto) {
+        document.getElementById('detailTemaDenuncia').innerHTML = 
+            '<span class="inline-flex items-center gap-1">' +
+            '<span class="material-symbols-outlined text-sm text-primary">local_shipping</span>' +
+            denuncia.motivo_verificacion_texto +
+            '</span>';
+    } else {
+        document.getElementById('detailTemaDenuncia').textContent = denuncia.nombre_tema_denuncia || 'No especificado';
+    }
+    
     document.getElementById('detailUbicacion').textContent = denuncia.ubicacion_incidente || 'No especificada';
     document.getElementById('detailHechos').textContent = denuncia.hechos_denunciados || 'Sin descripción';
     

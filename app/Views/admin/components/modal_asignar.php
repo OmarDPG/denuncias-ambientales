@@ -7,7 +7,7 @@
  * Modal para asignar denuncias a usuarios específicos
  * 
  * Uso:
- * - Se activa con: openAsignarModal(idDenuncia)
+ * - Se activa con: openAsignarModal(idDenuncia, idAreaResponsable)
  * - Se cierra con: closeAsignarModal()
  * - Permite asignar responsable o tomar caso personalmente
  */
@@ -126,9 +126,11 @@
 // ═══════════════════════════════════════════════════════════════════════════
 
 let currentAsignarDenunciaId = null;
+let currentAsignarAreaId = null;
 
-function openAsignarModal(idDenuncia) {
+function openAsignarModal(idDenuncia, idAreaResponsable = null) {
     currentAsignarDenunciaId = idDenuncia;
+    currentAsignarAreaId = idAreaResponsable;
     document.getElementById('asignarIdDenuncia').value = idDenuncia;
     document.getElementById('asignarModalFolio').textContent = 'Folio: #' + idDenuncia;
     
@@ -210,12 +212,14 @@ function cargarUsuariosDisponibles() {
     const select = document.getElementById('usuarioAsignado');
     select.innerHTML = '<option value="">Cargando usuarios...</option>';
     
-    // Obtener área de la denuncia (puedes ajustar esto según necesites)
-    // Por ahora usaremos el área del usuario actual o un valor predeterminado
-    const idArea = 2; // Cambiar según contexto
+    // Validar que tenemos el área de la denuncia
+    if (!currentAsignarAreaId) {
+        console.warn('No se proporcionó id_area_responsable. Usando área DNS (2) por defecto.');
+        currentAsignarAreaId = 2; // Fallback a área DNS
+    }
     
     // Cargar usuarios via AJAX
-    fetch('<?= base_url("admin/obtenerUsuariosArea/") ?>' + idArea, {
+    fetch('<?= base_url("admin/obtenerUsuariosArea/") ?>' + currentAsignarAreaId, {
         method: 'GET',
         headers: {
             'X-Requested-With': 'XMLHttpRequest'

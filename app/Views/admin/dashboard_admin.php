@@ -105,4 +105,5 @@
 <!-- Modales -->
 <?= view('admin/components/modal_detalle') ?>
 <?= view('admin/components/modal_turnar') ?>
-<?= view('admin/components/modal_asignar') ?><?= view('admin/components/modal_desechar') ?>
+<?= view('admin/components/modal_asignar') ?>
+<?= view('admin/components/modal_desechar') ?>

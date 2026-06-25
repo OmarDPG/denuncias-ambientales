@@ -23,7 +23,6 @@ class Admin extends BaseController
 {
     protected DenunciasModel $denunciasModel;
     protected ArchivosDenunciasModel $archivosDenunciasModel;
-    protected AdminModel $adminModel;
     protected AreasModel $areasModel;
     protected MotivoVerificacionModel $motivoVerificacionModel;
     protected DocumentosDenunciaModel $documentosDenunciaModel;
@@ -1297,7 +1296,7 @@ class Admin extends BaseController
 
         // Validar que no esté ya asignada
         if ($denuncia['id_usuario_asignado']) {
-            $usuarioAsignado = $this->adminModel->find($denuncia['id_usuario_asignado']);
+            $usuarioAsignado = $this->administrador->find($denuncia['id_usuario_asignado']);
             return $this->response->setJSON([
                 'success' => false,
                 'message' => 'Este caso ya está asignado a ' . ($usuarioAsignado['nombre'] ?? 'otro usuario')
@@ -1845,12 +1844,37 @@ class Admin extends BaseController
 
         $idDenuncia = $this->request->getPost('id_denuncia');
         $observaciones = $this->request->getPost('observaciones');
+        $resultadoInspeccion = $this->request->getPost('resultado_inspeccion');
+        $hallazgos = $this->request->getPost('hallazgos');
+        $recomendaciones = $this->request->getPost('recomendaciones');
         $archivo = $this->request->getFile('archivo');
 
+        // Validaciones
         if (!$idDenuncia || !$archivo || !$archivo->isValid()) {
             return $this->response->setJSON([
                 'success' => false,
                 'message' => 'Se requiere el acta de inspección'
+            ]);
+        }
+
+        if (!$resultadoInspeccion || !in_array($resultadoInspeccion, ['INFRACCION_DETECTADA', 'SIN_INFRACCIONES'])) {
+            return $this->response->setJSON([
+                'success' => false,
+                'message' => 'Debe seleccionar el resultado de la inspección'
+            ]);
+        }
+
+        if (empty($hallazgos) || strlen($hallazgos) < 100) {
+            return $this->response->setJSON([
+                'success' => false,
+                'message' => 'Los hallazgos deben tener al menos 100 caracteres'
+            ]);
+        }
+
+        if (empty($recomendaciones)) {
+            return $this->response->setJSON([
+                'success' => false,
+                'message' => 'Las recomendaciones son requeridas'
             ]);
         }
 
@@ -1901,22 +1925,58 @@ class Admin extends BaseController
             ];
             $idDocumento = $this->documentosDenunciaModel->insert($datosDoc);
 
-            // Actualizar a INSPECCION_CONCLUIDA
+            // Paso 1: Actualizar a INSPECCION_CONCLUIDA (temporal)
             $this->denunciasModel->update($idDenuncia, [
                 'id_estado_actual' => 7, // INSPECCION_CONCLUIDA
                 'fecha_conclusion_inspeccion' => date('Y-m-d H:i:s'),
-                'observaciones_inspeccion' => $observaciones
+                'observaciones_inspeccion' => $observaciones,
+                'resultado_inspeccion' => $resultadoInspeccion,
+                'hallazgos_inspeccion' => $hallazgos,
+                'recomendaciones_inspeccion' => $recomendaciones
             ]);
 
-            // Registrar historial
+            // Registrar historial de conclusión
             $this->registrarHistorial(
                 $idDenuncia,
                 'CONCLUSION_INSPECCION',
                 'EN_INSPECCION',
                 'INSPECCION_CONCLUIDA',
-                1, // DS (área origen) - CORREGIDO: era 4 (no existe)
+                1, // DS (área origen)
                 null,
-                $observaciones
+                "Inspección concluida - Resultado: {$resultadoInspeccion}"
+            );
+
+            // Paso 2: Transición automática a REGRESADA_DNS
+            $this->denunciasModel->update($idDenuncia, [
+                'id_estado_actual' => 8,           // REGRESADA_DNS
+                'id_area_responsable' => 2,        // DNS
+                'id_usuario_asignado' => null,     // Sin asignar
+                'fecha_regreso_dns' => date('Y-m-d H:i:s')
+            ]);
+
+            // Registrar turnado a DNS
+            $observacionesTurnado = "Inspección concluida - Resultado: {$resultadoInspeccion}. " .
+                                   "Hallazgos: " . substr($hallazgos, 0, 200) . 
+                                   (strlen($hallazgos) > 200 ? '...' : '');
+            
+            $this->turnadosModel->insert([
+                'id_denuncia' => $idDenuncia,
+                'id_area_origen' => 1,              // DS
+                'id_area_destino' => 2,             // DNS
+                'id_usuario_turna' => $usuario['id_adm'],
+                'observaciones' => $observacionesTurnado,
+                'fecha_turnado' => date('Y-m-d H:i:s')
+            ]);
+
+            // Registrar historial de regreso a DNS
+            $this->registrarHistorial(
+                $idDenuncia,
+                'REGRESO_DNS',
+                'INSPECCION_CONCLUIDA',
+                'REGRESADA_DNS',
+                1,  // DS (área origen)
+                2,  // DNS (área destino)
+                'Caso regresado automáticamente a DNS para análisis post-inspección'
             );
 
             $db->transComplete();
@@ -1930,11 +1990,13 @@ class Admin extends BaseController
 
             return $this->response->setJSON([
                 'success' => true,
-                'message' => 'Inspección concluida correctamente',
+                'message' => 'Inspección concluida y enviada automáticamente al DNS',
                 'data' => [
                     'id_denuncia' => $idDenuncia,
                     'folio' => $denuncia['folio'],
-                    'id_documento' => $idDocumento
+                    'id_documento' => $idDocumento,
+                    'nuevo_estado' => 'REGRESADA_DNS',
+                    'area_responsable' => 'DNS'
                 ]
             ]);
         } catch (\Exception $e) {
@@ -2793,7 +2855,7 @@ class Admin extends BaseController
         }
 
         // Validar que el usuario destino pertenezca al área responsable
-        $usuarioDestino = $this->adminModel->find($idUsuarioDestino);
+        $usuarioDestino = $this->administrador->find($idUsuarioDestino);
         if (!$usuarioDestino || $usuarioDestino['id_area'] != $denuncia['id_area_responsable']) {
             return $this->response->setJSON([
                 'success' => false,
@@ -2863,7 +2925,7 @@ class Admin extends BaseController
         }
 
         try {
-            $usuarios = $this->adminModel
+            $usuarios = $this->administrador
                 ->select('id_adm, nombre, apellidoP, apellidoM, email')
                 ->where('id_area', $idArea)
                 ->where('activo', 1)
