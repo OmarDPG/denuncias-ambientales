@@ -168,8 +168,23 @@ function saveAprobarInspeccion() {
     // Mostrar loading
     setButtonLoading(btnSubmit, true);
     
-    // Preparar FormData
-    const formData = new FormData(form);
+    // Preparar FormData manualmente para asegurar que el archivo se incluya
+    const formData = new FormData();
+    formData.append('id_denuncia', document.getElementById('aprobarInspeccionIdDenuncia').value);
+    formData.append('observaciones', observaciones);
+    
+    // Agregar CSRF token
+    const csrfInput = form.querySelector('input[name^="csrf_"]');
+    if (csrfInput) {
+        formData.append(csrfInput.name, csrfInput.value);
+    }
+    
+    // Agregar archivo si existe
+    const archivoInput = document.getElementById('aprobarInspeccionArchivo');
+    if (archivoInput && archivoInput.files.length > 0) {
+        formData.append('archivo', archivoInput.files[0]);
+        console.log('Archivo adjunto:', archivoInput.files[0].name, '(', archivoInput.files[0].size, 'bytes)');
+    }
     
     // Enviar via AJAX
     fetch('<?= base_url("admin/aprobarInspeccion") ?>', {

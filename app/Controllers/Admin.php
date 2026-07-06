@@ -871,6 +871,9 @@ class Admin extends BaseController
             'EVIDENCIA_INSPECCION' => 'evidencias',
             'NOTIFICACION' => 'notificaciones',
             'RESOLUCION' => 'resoluciones',
+            'APROBACION_INSPECCION' => 'dictamenes',
+            'OFICIO_RECHAZO' => 'rechazos',
+            'JUSTIFICACION_FLUJO' => 'justificaciones',
         ];
 
         $carpeta = $rutas[$codigoTipo] ?? 'evidencias';
@@ -986,7 +989,7 @@ class Admin extends BaseController
 
                 $enSancion = $this->denunciasModel
                     ->whereIn('id_estado_actual', [9, 10]) // EN_ELABORACION_SANCION, SANCIONADA
-                    ->where('id_usuario_asignado', $usuario['id_adm'])
+                    // ->where('id_usuario_asignado', $usuario['id_adm'])
                     ->where('verificado_en IS NOT NULL', null, false)
                     ->orderBy('verificado_en', 'DESC')
                     ->findAll();
@@ -1620,6 +1623,53 @@ class Admin extends BaseController
             $db = \Config\Database::connect();
             $db->transStart();
 
+            // Procesar documento de aprobación (opcional)
+            $archivo = $this->request->getFile('archivo');
+            if ($archivo && $archivo->isValid() && !$archivo->hasMoved()) {
+                log_message('info', "Procesando archivo de aprobación: {$archivo->getName()}");
+                
+                $hashArchivo = $this->calcularHashArchivo($archivo);
+                $nombreOriginal = $archivo->getName();
+                $tamañoBytes = $archivo->getSize();
+                $mimeType = $archivo->getMimeType();
+
+                $nombreUnico = $this->generarNombreUnico($nombreOriginal);
+                $rutaDestino = $this->obtenerRutaSubida('APROBACION_INSPECCION');
+
+                // Crear directorio si no existe
+                if (!is_dir($rutaDestino)) {
+                    mkdir($rutaDestino, 0755, true);
+                }
+
+                // Mover archivo
+                $archivo->move($rutaDestino, $nombreUnico);
+                
+                log_message('info', "Archivo guardado en: {$rutaDestino}{$nombreUnico}");
+
+                // Guardar en base de datos
+                $datosDoc = [
+                    'id_denuncia' => $idDenuncia,
+                    'id_tipo_documento' => 3, // DICTAMEN_DNS (documento de aprobación)
+                    'nombre_original' => $nombreOriginal,
+                    'nombre_almacenado' => $nombreUnico,
+                    'ruta_archivo' => $rutaDestino . $nombreUnico,
+                    'hash_sha256' => $hashArchivo,
+                    'peso_bytes' => $tamañoBytes,
+                    'tipo_mime' => $mimeType,
+                    'id_usuario_subida' => $usuario['id_adm'],
+                    'fecha_subida' => date('Y-m-d H:i:s')
+                ];
+                $idDocumento = $this->documentosDenunciaModel->insert($datosDoc);
+                
+                log_message('info', "Documento guardado en BD con ID: {$idDocumento}");
+            } else {
+                if ($archivo) {
+                    log_message('warning', "Archivo no válido o ya movido. Error: " . $archivo->getErrorString());
+                } else {
+                    log_message('info', "No se adjuntó documento de aprobación (es opcional)");
+                }
+            }
+
             // Actualizar a APROBADA_INSPECCION y turnar a DS
             $this->denunciasModel->update($idDenuncia, [
                 'id_estado_actual' => 4, // APROBADA_INSPECCION
@@ -2132,12 +2182,19 @@ class Admin extends BaseController
         }
 
         $idDenuncia = $this->request->getPost('id_denuncia');
-        $idTipoSancion = $this->request->getPost('id_tipo_sancion');
-        $montoSancion = $this->request->getPost('monto_sancion');
-        $observaciones = $this->request->getPost('observaciones');
+        $idTipoSancion = $this->request->getPost('id_tipo_sancion') ?? 1; // Valor por defecto
+        $montoSancion = $this->request->getPost('monto_sancion') ?? 0;
+        $observaciones = $this->request->getPost('observaciones') ?? '';
         $archivo = $this->request->getFile('archivo');
 
-        if (!$idDenuncia || !$idTipoSancion || !$archivo || !$archivo->isValid()) {
+        if (!$idDenuncia) {
+            return $this->response->setJSON([
+                'success' => false,
+                'message' => 'Falta el ID de denuncia'
+            ]);
+        }
+
+        if (!$archivo || !$archivo->isValid() || $archivo->hasMoved()) {
             return $this->response->setJSON([
                 'success' => false,
                 'message' => 'Se requiere el acta de sanción'
@@ -2156,7 +2213,8 @@ class Admin extends BaseController
             $db = \Config\Database::connect();
             $db->transStart();
 
-            // Subir acta de sanción
+            log_message('info', "Procesando acta de sanción: {$archivo->getName()}");
+
             // Calcular hash ANTES de mover el archivo
             $hashArchivo = $this->calcularHashArchivo($archivo);
             $nombreOriginal = $archivo->getName();
@@ -2166,12 +2224,19 @@ class Admin extends BaseController
             $nombreUnico = $this->generarNombreUnico($nombreOriginal);
             $rutaDestino = $this->obtenerRutaSubida('ACTA_SANCION');
 
+            // Crear directorio si no existe
+            if (!is_dir($rutaDestino)) {
+                mkdir($rutaDestino, 0755, true);
+            }
+
             // Mover archivo
             $archivo->move($rutaDestino, $nombreUnico);
 
+            log_message('info', "Archivo guardado en: {$rutaDestino}{$nombreUnico}");
+
             $datosDoc = [
                 'id_denuncia' => $idDenuncia,
-                'id_tipo_documento' => 3, // ACTA_SANCION
+                'id_tipo_documento' => 7, // ACTA_SANCION
                 'nombre_original' => $nombreOriginal,
                 'nombre_almacenado' => $nombreUnico,
                 'ruta_archivo' => $rutaDestino . $nombreUnico,
@@ -2182,6 +2247,8 @@ class Admin extends BaseController
                 'fecha_subida' => date('Y-m-d H:i:s')
             ];
             $idDocumento = $this->documentosDenunciaModel->insert($datosDoc);
+
+            log_message('info', "Documento guardado en BD con ID: {$idDocumento}");
 
             // Actualizar a SANCIONADA
             $this->denunciasModel->update($idDenuncia, [

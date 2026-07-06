@@ -31,98 +31,26 @@
                         <div>
                             <p class="font-headline font-bold text-sm text-red-900 mb-1">Emisión de acta administrativa</p>
                             <p class="text-sm text-red-800">
-                                Se elaborará un acta administrativa con sanción económica por las infracciones 
-                                detectadas durante la inspección.
+                                Adjunte el acta administrativa de sanción firmada y sellada. Los detalles de la sanción 
+                                deben estar contenidos en el documento.
                             </p>
                         </div>
                     </div>
                 </div>
 
-                <!-- Tipo de Sanción -->
+                <!-- Observaciones -->
                 <div class="space-y-2">
                     <label class="font-headline font-bold text-sm text-primary uppercase tracking-wider">
-                        Tipo de Sanción <span class="text-error">*</span>
+                        Observaciones <span class="text-secondary">(Opcional)</span>
                     </label>
-                    <select id="emitirSancionTipo" name="tipo_sancion" required
-                        class="w-full bg-surface-container-low border-0 border-b-2 border-outline-variant/40 focus:border-primary focus:ring-0 py-3 text-on-surface font-body">
-                        <option value="">Seleccione un tipo...</option>
-                        <option value="MULTA_ECONOMICA">Multa económica</option>
-                        <option value="CLAUSURA_TEMPORAL">Clausura temporal</option>
-                        <option value="CLAUSURA_DEFINITIVA">Clausura definitiva</option>
-                        <option value="SUSPENSION_ACTIVIDADES">Suspensión de actividades</option>
-                        <option value="REMEDIACION_AMBIENTAL">Remediación ambiental obligatoria</option>
-                        <option value="SANCION_COMBINADA">Sanción combinada (multa + medidas)</option>
-                    </select>
-                </div>
-
-                <!-- Monto de la Multa -->
-                <div class="space-y-2">
-                    <label class="font-headline font-bold text-sm text-primary uppercase tracking-wider">
-                        Monto de la Multa (UMA) <span class="text-error">*</span>
-                    </label>
-                    <div class="relative">
-                        <input type="number" id="emitirSancionMonto" name="monto_uma" required
-                            min="1" step="0.01"
-                            placeholder="0.00"
-                            class="w-full bg-surface-container-low border-0 border-b-2 border-outline-variant/40 focus:border-primary focus:ring-0 py-3 pl-16 text-on-surface font-body text-lg font-bold" />
-                        <span class="absolute left-0 top-3 text-secondary font-headline font-bold text-sm">UMA</span>
-                    </div>
-                    <div class="grid grid-cols-2 gap-4 text-xs text-secondary mt-2">
-                        <div class="bg-surface-container-low p-3 rounded-lg">
-                            <p class="font-bold">Valor UMA 2024:</p>
-                            <p class="text-lg font-headline text-on-surface">$103.74</p>
-                        </div>
-                        <div class="bg-surface-container-low p-3 rounded-lg">
-                            <p class="font-bold">Equivalente en pesos:</p>
-                            <p id="montoEquivalente" class="text-lg font-headline text-on-surface">$0.00</p>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Fundamento Legal -->
-                <div class="space-y-2">
-                    <label class="font-headline font-bold text-sm text-primary uppercase tracking-wider">
-                        Fundamento Legal <span class="text-error">*</span>
-                    </label>
-                    <textarea id="emitirSancionFundamento" name="fundamento_legal" required
-                        rows="3"
-                        placeholder="Artículos, fracciones y leyes aplicables..."
-                        class="w-full bg-surface-container-low border-0 border-b-2 border-outline-variant/40 focus:border-primary focus:ring-0 py-3 px-4 text-on-surface font-body rounded-lg resize-none"></textarea>
-                    <p class="text-xs text-secondary">Ejemplo: Art. 171 LGEEPA, Art. 55 Ley Ambiental del Estado de Puebla</p>
-                </div>
-
-                <!-- Infracciones Cometidas -->
-                <div class="space-y-2">
-                    <label class="font-headline font-bold text-sm text-primary uppercase tracking-wider">
-                        Descripción de Infracciones <span class="text-error">*</span>
-                    </label>
-                    <textarea id="emitirSancionInfracciones" name="infracciones" required
-                        rows="6"
-                        placeholder="Describa detalladamente las infracciones cometidas y su gravedad..."
-                        class="w-full bg-surface-container-low border-0 border-b-2 border-outline-variant/40 focus:border-primary focus:ring-0 py-3 px-4 text-on-surface font-body rounded-lg resize-none"></textarea>
-                    <p class="text-xs text-secondary">Mínimo 100 caracteres</p>
-                </div>
-
-                <!-- Medidas Correctivas -->
-                <div class="space-y-2">
-                    <label class="font-headline font-bold text-sm text-primary uppercase tracking-wider">
-                        Medidas Correctivas <span class="text-secondary">(Opcional)</span>
-                    </label>
-                    <textarea id="emitirSancionMedidas" name="medidas_correctivas"
+                    <textarea id="emitirSancionObservaciones" name="observaciones"
                         rows="4"
-                        placeholder="Indique las medidas que debe implementar el sancionado para corregir la situación..."
+                        placeholder="Observaciones adicionales sobre el acta de sanción..."
                         class="w-full bg-surface-container-low border-0 border-b-2 border-outline-variant/40 focus:border-primary focus:ring-0 py-3 px-4 text-on-surface font-body rounded-lg resize-none"></textarea>
-                </div>
-
-                <!-- Plazo para Cumplir -->
-                <div class="space-y-2">
-                    <label class="font-headline font-bold text-sm text-primary uppercase tracking-wider">
-                        Plazo para Cumplimiento <span class="text-secondary">(días hábiles)</span>
-                    </label>
-                    <input type="number" id="emitirSancionPlazo" name="plazo_dias"
-                        min="1" max="180" value="30"
-                        class="w-full bg-surface-container-low border-0 border-b-2 border-outline-variant/40 focus:border-primary focus:ring-0 py-3 text-on-surface font-body" />
-                    <p class="text-xs text-secondary">Plazo en días hábiles para que el sancionado cumpla con las medidas correctivas</p>
+                    <p class="text-xs text-secondary flex items-center gap-1">
+                        <span class="material-symbols-outlined text-sm">lightbulb</span>
+                        Puede incluir información adicional relevante sobre la sanción emitida
+                    </p>
                 </div>
 
                 <!-- Acta Administrativa -->
@@ -199,23 +127,9 @@ function saveEmitirSancion() {
     const form = document.getElementById('emitirSancionForm');
     const btnSubmit = document.getElementById('btnEmitirSancionSubmit');
     
-    // Validar formulario
+    // Validar formulario básico
     if (!form.checkValidity()) {
         form.reportValidity();
-        return;
-    }
-    
-    // Validar monto
-    const monto = parseFloat(document.getElementById('emitirSancionMonto').value);
-    if (!monto || monto <= 0) {
-        showToast('error', 'Monto inválido', 'El monto de la multa debe ser mayor a 0');
-        return;
-    }
-    
-    // Validar infracciones
-    const infracciones = document.getElementById('emitirSancionInfracciones').value.trim();
-    if (infracciones.length < 100) {
-        showToast('error', 'Descripción insuficiente', 'Debe describir las infracciones con al menos 100 caracteres');
         return;
     }
     
@@ -233,16 +147,34 @@ function saveEmitirSancion() {
     }
     
     // Confirmar acción
-    const montoEquiv = (monto * 103.74).toFixed(2);
-    if (!confirm(`¿Está seguro de emitir una sanción de ${monto} UMA ($${montoEquiv} MXN)?`)) {
+    if (!confirm('¿Está seguro de emitir el acta administrativa de sanción?')) {
         return;
     }
     
     // Mostrar loading
     setButtonLoading(btnSubmit, true);
     
-    // Preparar FormData
-    const formData = new FormData(form);
+    // Preparar FormData manualmente
+    const formData = new FormData();
+    formData.append('id_denuncia', document.getElementById('emitirSancionIdDenuncia').value);
+    
+    // Observaciones (opcional)
+    const observaciones = document.getElementById('emitirSancionObservaciones').value.trim();
+    formData.append('observaciones', observaciones);
+    
+    // Valores por defecto para campos requeridos por el controlador
+    formData.append('id_tipo_sancion', '1'); // Valor por defecto
+    formData.append('monto_sancion', '0');    // Valor por defecto
+    
+    // Agregar CSRF token
+    const csrfInput = form.querySelector('input[name^="csrf_"]');
+    if (csrfInput) {
+        formData.append(csrfInput.name, csrfInput.value);
+    }
+    
+    // Agregar archivo
+    formData.append('archivo', archivo);
+    console.log('Archivo adjunto:', archivo.name, '(', archivo.size, 'bytes)');
     
     // Enviar via AJAX
     fetch('<?= base_url("admin/emitirSancion") ?>', {
@@ -270,15 +202,8 @@ function saveEmitirSancion() {
     });
 }
 
-// Calcular equivalente en pesos al cambiar el monto UMA
+// Remover el event listener del monto UMA ya que ese campo fue eliminado
 document.addEventListener('DOMContentLoaded', function() {
-    const montoInput = document.getElementById('emitirSancionMonto');
-    if (montoInput) {
-        montoInput.addEventListener('input', function() {
-            const monto = parseFloat(this.value) || 0;
-            const equivalente = monto * 103.74;
-            document.getElementById('montoEquivalente').textContent = '$' + equivalente.toFixed(2);
-        });
-    }
+    // Ya no se necesita calcular equivalentes de UMA
 });
 </script>
