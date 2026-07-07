@@ -593,15 +593,19 @@ function renderizarDetalleDenuncia(data) {
     // ═══════════════════════════════════════════════════════════════════════════
     document.getElementById('detailTipoDenunciaDetalle').textContent = denuncia.nombre_tipo_denuncia || denuncia.tipo_denuncia || 'No especificado';
     
-    // Mostrar motivo de verificación si existe (para denuncias de verificación vehicular)
-    // Si no, mostrar tema de denuncia normal
-    if (denuncia.id_motivo_verificacion && denuncia.motivo_verificacion_texto) {
+    // Verificar primero si es denuncia de verificación vehicular (id_tipo_denuncia == 7)
+    // Para tipo 7: mostrar MOTIVO de verificación (tabla motivo_verificacion)
+    // Para otros tipos: mostrar TEMA de denuncia (tabla tema_denuncia)
+    if (denuncia.id_tipo_denuncia == 7) {
+        // Es verificación vehicular → Mostrar MOTIVO de verificación
+        const motivoTexto = denuncia.motivo_verificacion_texto || 'No especificado';
         document.getElementById('detailTemaDenuncia').innerHTML = 
             '<span class="inline-flex items-center gap-1">' +
-            '<span class="material-symbols-outlined text-sm text-primary">local_shipping</span>' +
-            denuncia.motivo_verificacion_texto +
+            '<span class="material-symbols-outlined text-sm text-primary">directions_car</span>' +
+            motivoTexto +
             '</span>';
     } else {
+        // Cualquier otro tipo → Mostrar TEMA de denuncia
         document.getElementById('detailTemaDenuncia').textContent = denuncia.nombre_tema_denuncia || 'No especificado';
     }
     

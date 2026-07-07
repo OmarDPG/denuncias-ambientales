@@ -451,8 +451,8 @@ function populatePreviewModal() {
     // Ubicación (opcional para tipo 7)
     if (esVerificacionVehicular) {
         document.getElementById('prev_ubicacionOpcional').style.display = 'inline';
-        document.getElementById('prev_latitud').textContent = formData.latitude ? parseFloat(formData.latitude).toFixed(6) : 'No proporcionada';
-        document.getElementById('prev_longitud').textContent = formData.longitude ? parseFloat(formData.longitude).toFixed(6) : 'No proporcionada';
+        document.getElementById('prev_latitud').textContent = formData.latitude ? parseFloat(formData.latitude).toFixed(6) : 'No aplicable';
+        document.getElementById('prev_longitud').textContent = formData.longitude ? parseFloat(formData.longitude).toFixed(6) : 'No aplicable';
     } else {
         document.getElementById('prev_ubicacionOpcional').style.display = 'none';
         document.getElementById('prev_latitud').textContent = formData.latitude ? parseFloat(formData.latitude).toFixed(6) : 'N/A';
