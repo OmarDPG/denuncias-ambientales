@@ -366,7 +366,7 @@
                         <!-- Step 3: Reported Party & Evidence -->
                         <div id="step3" class="step-content space-y-8 pt-8 border-t border-surface-container">
                             <!-- Datos del Denunciado -->
-                            <div class="space-y-6">
+                            <div id="denunciadoSeccionCompleta" class="space-y-6">
                                 <div class="space-y-1">
                                     <h3 class="font-headline font-bold text-xl text-primary">Datos del Denunciado</h3>
                                     <p class="text-sm text-secondary">Información sobre la persona o entidad responsable del hecho
@@ -786,7 +786,7 @@
                 </div>
 
                 <!-- Sección 3: Datos del Denunciado -->
-                <div class="bg-surface-container-low rounded-xl p-6 space-y-4">
+                <div id="prev_denunciadoSeccionCompleta" class="bg-surface-container-low rounded-xl p-6 space-y-4">
                     <div class="flex items-center gap-3 mb-4">
                         <span class="material-symbols-outlined text-primary text-2xl" data-icon="gavel">gavel</span>
                         <h3 class="font-headline font-bold text-xl text-primary">Datos del Denunciado <span id="prev_denunciadoOpcional" class="text-sm font-normal text-secondary" style="display: none;">(Opcional)</span></h3>
@@ -1136,18 +1136,17 @@
 
         // ─── Configurar Paso 3 según modo vehicular ──────────────────────────────────
         function configurarPaso3Vehicular(esVehicular) {
+            const denunciadoSeccion = document.getElementById('denunciadoSeccionCompleta');
             const nombreInput = document.getElementById('nombreDenunciado');
             const moralContainer = document.getElementById('denunciadoMoralContainer');
             const direccionContainer = document.getElementById('denunciadoDireccionContainer');
             
             if (esVehicular) {
-                // Modo vehicular: solo nombre (opcional)
-                nombreInput.removeAttribute('required');
-                nombreInput.placeholder = 'Nombre del conductor (opcional)';
+                // Modo vehicular: ocultar completamente la sección del denunciado
+                if (denunciadoSeccion) denunciadoSeccion.style.display = 'none';
                 
-                // Ocultar checkbox moral y dirección
-                if (moralContainer) moralContainer.style.display = 'none';
-                if (direccionContainer) direccionContainer.style.display = 'none';
+                // Remover required del nombre
+                nombreInput.removeAttribute('required');
                 
                 // Remover required de campos de dirección
                 const camposDireccion = [
@@ -1163,7 +1162,10 @@
                 });
                 
             } else {
-                // Modo normal: restaurar comportamiento original
+                // Modo normal: mostrar la sección del denunciado
+                if (denunciadoSeccion) denunciadoSeccion.style.display = 'block';
+                
+                // Restaurar comportamiento original
                 nombreInput.setAttribute('required', 'required');
                 nombreInput.placeholder = 'Ingrese nombre o "Quien resulte responsable"';
                 

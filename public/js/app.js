@@ -343,18 +343,23 @@ function showPreviewModal() {
     }
 
     // Recolectar todos los datos faltantes del step 3 si no están en formData
-    if (!formData.nombreDenunciado) {
-        formData.nombreDenunciado = document.getElementById('nombreDenunciado').value;
-        formData.denunciadoEsMoral = document.getElementById('denunciadoEsMoral').checked;
-        formData.municipioDenunciado = document.getElementById('municipioDenunciado').value;
-        formData.coloniaDenunciado = document.getElementById('coloniaDenunciado').value;
-        formData.calleDenunciado = document.getElementById('calleDenunciado').value;
-        formData.codigoPostalDenunciado = document.getElementById('codigoPostalDenunciado').value;
-        formData.numeroExteriorDenunciado = document.getElementById('numeroExteriorDenunciado').value;
-        formData.numeroInteriorDenunciado = document.getElementById('numeroInteriorDenunciado').value;
-        
-        if (formData.denunciadoEsMoral) {
-            formData.razonSocialDenunciado = document.getElementById('razonSocialDenunciado').value;
+    const esVerificacionVehicular = (formData.idTipoDenuncia === '7');
+    
+    if (!esVerificacionVehicular) {
+        // Solo recolectar datos del denunciado para tipos que no sean verificación vehicular
+        if (!formData.nombreDenunciado) {
+            formData.nombreDenunciado = document.getElementById('nombreDenunciado').value;
+            formData.denunciadoEsMoral = document.getElementById('denunciadoEsMoral').checked;
+            formData.municipioDenunciado = document.getElementById('municipioDenunciado').value;
+            formData.coloniaDenunciado = document.getElementById('coloniaDenunciado').value;
+            formData.calleDenunciado = document.getElementById('calleDenunciado').value;
+            formData.codigoPostalDenunciado = document.getElementById('codigoPostalDenunciado').value;
+            formData.numeroExteriorDenunciado = document.getElementById('numeroExteriorDenunciado').value;
+            formData.numeroInteriorDenunciado = document.getElementById('numeroInteriorDenunciado').value;
+            
+            if (formData.denunciadoEsMoral) {
+                formData.razonSocialDenunciado = document.getElementById('razonSocialDenunciado').value;
+            }
         }
     }
 
@@ -455,22 +460,18 @@ function populatePreviewModal() {
     }
 
     // Sección 3: Datos del Denunciado
+    const denunciadoSeccionModal = document.getElementById('prev_denunciadoSeccionCompleta');
+    
     if (esVerificacionVehicular) {
-        document.getElementById('prev_denunciadoOpcional').style.display = 'inline';
-        // Mostrar datos si existen, sino mostrar "No proporcionado"
-        document.getElementById('prev_nombreDenunciado').textContent = formData.nombreDenunciado || 'No proporcionado';
-        
-        if (formData.nombreDenunciado) {
-            // Solo mostrar dirección si hay nombre
-            const direccionDenunciado = formData.calleDenunciado ? 
-                `${formData.calleDenunciado} ${formData.numeroExteriorDenunciado}${formData.numeroInteriorDenunciado ? ' Int. ' + formData.numeroInteriorDenunciado : ''}, Col. ${formData.coloniaDenunciado}, ${formData.municipioDenunciado}. CP: ${formData.codigoPostalDenunciado}` 
-                : 'No proporcionada';
-            document.getElementById('prev_direccionDenunciado').textContent = direccionDenunciado;
-            document.getElementById('prev_direccionDenunciadoContainer').style.display = 'block';
-        } else {
-            document.getElementById('prev_direccionDenunciadoContainer').style.display = 'none';
+        // Para verificación vehicular, ocultar completamente la sección del denunciado
+        if (denunciadoSeccionModal) {
+            denunciadoSeccionModal.style.display = 'none';
         }
     } else {
+        // Para otros tipos, mostrar la sección normalmente
+        if (denunciadoSeccionModal) {
+            denunciadoSeccionModal.style.display = 'block';
+        }
         document.getElementById('prev_denunciadoOpcional').style.display = 'none';
         document.getElementById('prev_nombreDenunciado').textContent = formData.nombreDenunciado;
         document.getElementById('prev_direccionDenunciadoContainer').style.display = 'block';
@@ -588,16 +589,32 @@ function confirmAndSubmit() {
     fd.append('vehiculo_color',         formData.vehiculoColor || '');
     fd.append('vehiculo_submarca',      formData.vehiculoSubmarca || '');
 
-    // Paso 3 – Denunciado
-    fd.append('nombre_denunciado',          formData.nombreDenunciado);
-    fd.append('denunciado_es_moral',        formData.denunciadoEsMoral ? 'true' : 'false');
-    fd.append('razon_social_denunciado',    formData.razonSocialDenunciado    || '');
-    fd.append('municipio_denunciado',       formData.municipioDenunciado);
-    fd.append('colonia_denunciado',         formData.coloniaDenunciado);
-    fd.append('calle_denunciado',           formData.calleDenunciado);
-    fd.append('codigo_postal_denunciado',   formData.codigoPostalDenunciado);
-    fd.append('numero_exterior_denunciado', formData.numeroExteriorDenunciado);
-    fd.append('numero_interior_denunciado', formData.numeroInteriorDenunciado || '');
+    // Paso 3 – Denunciado (no requerido para verificación vehicular)
+    const esVerificacionVehicular = (formData.idTipoDenuncia === '7');
+    
+    if (esVerificacionVehicular) {
+        // Para verificación vehicular, enviar valores vacíos o por defecto
+        fd.append('nombre_denunciado',          formData.nombreDenunciado || 'Quien resulte responsable');
+        fd.append('denunciado_es_moral',        'false');
+        fd.append('razon_social_denunciado',    '');
+        fd.append('municipio_denunciado',       formData.municipioDenunciado || 'No especificado');
+        fd.append('colonia_denunciado',         formData.coloniaDenunciado || 'No especificada');
+        fd.append('calle_denunciado',           formData.calleDenunciado || 'No especificada');
+        fd.append('codigo_postal_denunciado',   formData.codigoPostalDenunciado || '00000');
+        fd.append('numero_exterior_denunciado', formData.numeroExteriorDenunciado || 'S/N');
+        fd.append('numero_interior_denunciado', '');
+    } else {
+        // Para otros tipos, enviar los datos normalmente
+        fd.append('nombre_denunciado',          formData.nombreDenunciado);
+        fd.append('denunciado_es_moral',        formData.denunciadoEsMoral ? 'true' : 'false');
+        fd.append('razon_social_denunciado',    formData.razonSocialDenunciado    || '');
+        fd.append('municipio_denunciado',       formData.municipioDenunciado);
+        fd.append('colonia_denunciado',         formData.coloniaDenunciado);
+        fd.append('calle_denunciado',           formData.calleDenunciado);
+        fd.append('codigo_postal_denunciado',   formData.codigoPostalDenunciado);
+        fd.append('numero_exterior_denunciado', formData.numeroExteriorDenunciado);
+        fd.append('numero_interior_denunciado', formData.numeroInteriorDenunciado || '');
+    }
 
     // Archivos de evidencia
     uploadedFiles.forEach(function (file) {
