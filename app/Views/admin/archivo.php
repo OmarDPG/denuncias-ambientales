@@ -115,7 +115,7 @@
                                     <?= esc($ubicacion) ?>
                                 </td>
                                 <td class="px-6 py-5 text-right space-x-2">
-                                    <button onclick="openDetailModal('<?= esc($denuncia['folio']) ?>')"
+                                    <button onclick="openDetailModal(<?= esc($denuncia['id_denuncia']) ?>)"
                                         class="inline-flex items-center gap-1 px-3 py-2 bg-primary text-white rounded-lg text-xs font-bold hover:opacity-90 transition-all"
                                         title="Ver detalles completos">
                                         <span class="material-symbols-outlined text-sm">visibility</span>
@@ -130,23 +130,10 @@
                 </div>
             </section>
         </div>
+    </main>
 
-        <!-- Modal de Detalles de Denuncia -->
-        <div id="complaintDetailModal" class="hidden fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4" onclick="closeDetailModalOnOverlay(event)">
-            <div class="bg-surface-container-lowest rounded-2xl max-w-5xl w-full max-h-[90vh] overflow-hidden shadow-2xl" onclick="event.stopPropagation()">
-                <!-- Modal Header -->
-                <div class="sticky top-0 bg-gradient-to-br from-primary to-primary-container text-white px-8 py-6 flex justify-between items-center">
-                    <div>
-                        <h2 class="font-headline font-extrabold text-2xl">Detalles de Denuncia Archivada</h2>
-                        <p class="text-sm text-primary-fixed opacity-90 mt-1" id="detailModalFolio">Folio: —</p>
-                    </div>
-                    <button onclick="closeDetailModal()" class="text-white hover:bg-white/20 p-2 rounded-full transition-colors">
-                        <span class="material-symbols-outlined text-3xl">close</span>
-                    </button>
-                </div>
-
-                <!-- Modal Body -->
-                <div class="overflow-y-auto max-h-[calc(80vh-140px)] px-8 py-6 space-y-8">
+<!-- Modales -->
+<?= view('admin/components/modal_detalle') ?>
                     
                     <!-- Información del Reporte -->
                     <section class="space-y-4">
@@ -280,29 +267,6 @@
     </main>
 
 <script>
-// Base URL para las rutas
-const BASE_URL = '<?= base_url() ?>';
-
-// Base de datos de denuncias en JavaScript
-const complaintsDatabase = <?= !empty($denuncias) ? json_encode(
-    array_combine(
-        array_column($denuncias, 'folio'),
-        array_map(function($d) use ($archivosDenuncias) {
-            // Filtrar evidencias de esta denuncia
-            $evidencias = array_filter($archivosDenuncias, function($e) use ($d) {
-                return $e['id_denuncia'] == $d['id_denuncia'];
-            });
-            
-            $d['evidencias'] = array_values($evidencias);
-            return $d;
-        }, $denuncias)
-    )
-) : '{}' ?>;
-
-// Debug: Verificar qué hay en la base de datos
-console.log('Denuncias cargadas:', Object.keys(complaintsDatabase).length);
-console.log('Base de datos completa:', complaintsDatabase);
-
 // Función para filtrar la tabla
 function filterTable() {
     const input = document.getElementById('searchInput');
@@ -318,170 +282,5 @@ function filterTable() {
             tr[i].style.display = 'none';
         }
     }
-}
-
-// Función para abrir modal de detalles
-function openDetailModal(folio) {
-    const denuncia = complaintsDatabase[folio];
-    if (!denuncia) {
-        alert('Denuncia no encontrada');
-        return;
-    }
-
-    // Debug: Ver qué evidencias tiene la denuncia
-    console.log('Denuncia completa:', denuncia);
-    console.log('Evidencias de la denuncia:', denuncia.evidencias);
-    if (denuncia.evidencias && denuncia.evidencias.length > 0) {
-        console.log('Tipos de documento:', denuncia.evidencias.map(e => e.tipo_documento));
-    }
-
-    // Llenar información básica
-    document.getElementById('detailModalFolio').textContent = 'Folio: ' + folio;
-    document.getElementById('detailFechaCaptura').textContent = denuncia.fecha_captura ? 
-        new Date(denuncia.fecha_captura).toLocaleDateString('es-MX', { year: 'numeric', month: 'long', day: 'numeric' }) : '—';
-    document.getElementById('detailFechaResolucion').textContent = denuncia.fecha_resolucion ? 
-        new Date(denuncia.fecha_resolucion).toLocaleDateString('es-MX', { year: 'numeric', month: 'long', day: 'numeric' }) : '—';
-
-    // Datos del denunciante
-    document.getElementById('detailTipoPersona').textContent = denuncia.tipo_persona || '—';
-    document.getElementById('detailNombre').textContent = denuncia.nombre_completo || '—';
-    document.getElementById('detailGenero').textContent = denuncia.genero || '—';
-    document.getElementById('detailEmail').textContent = denuncia.email || '—';
-    document.getElementById('detailTelefono').textContent = denuncia.telefono || '—';
-    
-    // Dirección
-    const direccion = `${denuncia.calle || ''} ${denuncia.numero_exterior || ''} ${denuncia.numero_interior || ''}, Col. ${denuncia.colonia || ''}, ${denuncia.municipio || ''}, ${denuncia.estado || ''}, CP ${denuncia.codigo_postal || ''}`;
-    document.getElementById('detailDireccion').textContent = direccion.trim() || '—';
-
-    // Representante legal
-    if (denuncia.es_representante && denuncia.nombre_representante) {
-        document.getElementById('detailRepresentanteContainer').style.display = 'block';
-        document.getElementById('detailRepresentante').textContent = denuncia.nombre_representante + 
-            (denuncia.razon_social ? ' - ' + denuncia.razon_social : '');
-    } else {
-        document.getElementById('detailRepresentanteContainer').style.display = 'none';
-    }
-
-    // Detalles de la denuncia
-    document.getElementById('detailTipoDenuncia').textContent = denuncia.tipo_denuncia || '—';
-    const coords = (denuncia.latitud && denuncia.longitud) ? 
-        `Lat: ${denuncia.latitud}, Lon: ${denuncia.longitud}` : 'No especificadas';
-    document.getElementById('detailCoordenadas').textContent = coords;
-    document.getElementById('detailHechos').textContent = denuncia.hechos_denunciados || '—';
-
-    // Datos del denunciado
-    document.getElementById('detailNombreDenunciado').textContent = denuncia.nombre_denunciado || '—';
-    if (denuncia.denunciado_es_moral && denuncia.razon_social_denunciado) {
-        document.getElementById('detailRazonSocialContainer').style.display = 'block';
-        document.getElementById('detailRazonSocial').textContent = denuncia.razon_social_denunciado;
-    } else {
-        document.getElementById('detailRazonSocialContainer').style.display = 'none';
-    }
-    
-    const direccionDenunciado = `${denuncia.calle_denunciado || ''} ${denuncia.numero_exterior_denunciado || ''} ${denuncia.numero_interior_denunciado || ''}, Col. ${denuncia.colonia_denunciado || ''}, ${denuncia.municipio_denunciado || ''}, CP ${denuncia.codigo_postal_denunciado || ''}`;
-    document.getElementById('detailDireccionDenunciado').textContent = direccionDenunciado.trim() || '—';
-
-    // Evidencias
-    const evidenciasContainer = document.getElementById('detailEvidencias');
-    const evidencias = denuncia.evidencias || [];
-    const evidenciasIniciales = evidencias.filter(e => !e.tipo_documento || e.tipo_documento.toLowerCase() === 'evidencia');
-    
-    if (evidenciasIniciales.length > 0) {
-        evidenciasContainer.innerHTML = evidenciasIniciales.map(evidencia => {
-            const iconName = evidencia.tipo_archivo.includes('pdf') ? 'picture_as_pdf' : 'image';
-            const peso = formatBytes(evidencia.peso_bytes);
-            return `
-                <div class="flex items-center justify-between gap-4 p-4 bg-surface-container-low rounded-lg border border-outline-variant/20">
-                    <div class="flex items-center gap-3">
-                        <span class="material-symbols-outlined text-primary text-2xl">${iconName}</span>
-                        <div>
-                            <p class="font-medium text-on-surface text-sm">${evidencia.nombre_original}</p>
-                            <p class="text-xs text-secondary mt-1">${peso}</p>
-                        </div>
-                    </div>
-                    <div class="flex gap-2">
-                        <a href="${BASE_URL}admin/verEvidencia/${evidencia.id_evidencia}" 
-                           target="_blank"
-                           class="flex items-center gap-1 px-3 py-2 bg-primary text-white rounded-lg text-xs font-bold hover:opacity-90 transition-all">
-                            <span class="material-symbols-outlined text-sm">visibility</span>
-                            Ver
-                        </a>
-                        <a href="${BASE_URL}admin/verEvidencia/${evidencia.id_evidencia}?download=1" 
-                           class="flex items-center gap-1 px-3 py-2 bg-surface-container text-primary border border-outline-variant/30 rounded-lg text-xs font-bold hover:bg-surface-container-high transition-all">
-                            <span class="material-symbols-outlined text-sm">download</span>
-                            Descargar
-                        </a>
-                    </div>
-                </div>
-            `;
-        }).join('');
-    } else {
-        evidenciasContainer.innerHTML = '<p class="text-secondary text-sm">No se adjuntaron evidencias</p>';
-    }
-
-    // Documento de Resolución
-    const docResolucionContainer = document.getElementById('detailDocumentoResolucion');
-    const docResolucion = evidencias.find(e => e.tipo_documento && e.tipo_documento.toLowerCase() === 'resolución');
-    
-    console.log('Buscando documento de resolución...');
-    console.log('Total evidencias:', evidencias.length);
-    console.log('Documento de resolución encontrado:', docResolucion);
-    
-    if (docResolucion) {
-        const iconName = docResolucion.tipo_archivo.includes('pdf') ? 'picture_as_pdf' : 'description';
-        const peso = formatBytes(docResolucion.peso_bytes);
-        docResolucionContainer.innerHTML = `
-            <div class="flex items-center justify-between gap-4 p-4 bg-tertiary-fixed/10 rounded-lg border-2 border-tertiary-fixed">
-                <div class="flex items-center gap-3">
-                    <div class="w-10 h-10 bg-tertiary-fixed rounded-full flex items-center justify-center">
-                        <span class="material-symbols-outlined text-on-tertiary-fixed">${iconName}</span>
-                    </div>
-                    <div>
-                        <p class="font-medium text-on-surface text-sm">${docResolucion.nombre_original}</p>
-                        <p class="text-xs text-secondary mt-1">${peso} • Oficio de Resolución</p>
-                    </div>
-                </div>
-                <div class="flex gap-2">
-                    <a href="${BASE_URL}admin/verEvidencia/${docResolucion.id_evidencia}" 
-                       target="_blank"
-                       class="flex items-center gap-1 px-3 py-2 bg-primary text-white rounded-lg text-xs font-bold hover:opacity-90 transition-all">
-                        <span class="material-symbols-outlined text-sm">visibility</span>
-                        Ver
-                    </a>
-                    <a href="${BASE_URL}admin/verEvidencia/${docResolucion.id_evidencia}?download=1" 
-                       class="flex items-center gap-1 px-3 py-2 bg-surface-container text-primary border border-outline-variant/30 rounded-lg text-xs font-bold hover:bg-surface-container-high transition-all">
-                        <span class="material-symbols-outlined text-sm">download</span>
-                        Descargar
-                    </a>
-                </div>
-            </div>
-        `;
-    } else {
-        docResolucionContainer.innerHTML = '<p class="text-secondary text-sm">No se encontró documento de resolución</p>';
-    }
-
-    // Mostrar modal
-    document.getElementById('complaintDetailModal').classList.remove('hidden');
-}
-
-// Función para cerrar modal
-function closeDetailModal() {
-    document.getElementById('complaintDetailModal').classList.add('hidden');
-}
-
-// Cerrar modal al hacer clic en el overlay
-function closeDetailModalOnOverlay(event) {
-    if (event.target.id === 'complaintDetailModal') {
-        closeDetailModal();
-    }
-}
-
-// Función auxiliar para formatear bytes
-function formatBytes(bytes) {
-    if (bytes === 0) return '0 Bytes';
-    const k = 1024;
-    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
 }
 </script>

@@ -260,18 +260,45 @@ class Admin extends BaseController
             'esAdmin' => $usuario['es_admin']
         ];
 
-        // Obtener denuncias que ya fueron asignadas/turnadas (no en estado RECIBIDA)
+        // Obtener denuncias que ya fueron asignadas/turnadas (no en estado RECIBIDA ni estados terminales)
         $denunciasAsignadas = $this->denunciasModel
-            ->where('id_estado_actual !=', 1) // Excluir estado RECIBIDA
-            ->where('verificado_en IS NOT NULL', null, false)
-            ->orderBy('fecha_ultimo_cambio_estado', 'DESC')
+            ->select('denuncias.*, 
+                     estados_denuncia.nombre_estado,
+                     estados_denuncia.codigo as codigo_estado,
+                     areas.nombre_area,
+                     admin.nombre as nombre_responsable,
+                     admin.apellidoP as apellidoP_responsable,
+                     admin.apellidoM as apellidoM_responsable,
+                     denuncias.verificado_en as fecha_denuncia')
+            ->join('estados_denuncia', 'estados_denuncia.id_estado = denuncias.id_estado_actual', 'left')
+            ->join('areas', 'areas.id_area = denuncias.id_area_responsable', 'left')
+            ->join('admin', 'admin.id_adm = denuncias.id_usuario_asignado', 'left')
+            ->where('denuncias.id_estado_actual !=', 1) // Excluir estado RECIBIDA
+            ->whereNotIn('denuncias.id_estado_actual', [10, 11, 20, 21, 22]) // Excluir estados terminales: SANCIONADA, FINALIZADA, CONCLUIDA_NO_COMPETENTE, DESECHADA, ARCHIVADA
+            ->where('denuncias.verificado_en IS NOT NULL', null, false)
+            ->orderBy('denuncias.fecha_ultimo_cambio_estado', 'DESC')
             ->paginate(15);
 
         $pager = $this->denunciasModel->pager;
 
+        // Construir campo responsable concatenando nombre completo
+        foreach ($denunciasAsignadas as &$denuncia) {
+            if (!empty($denuncia['nombre_responsable'])) {
+                $denuncia['responsable'] = trim(
+                    $denuncia['nombre_responsable'] . ' ' . 
+                    ($denuncia['apellidoP_responsable'] ?? '') . ' ' . 
+                    ($denuncia['apellidoM_responsable'] ?? '')
+                );
+            } else {
+                $denuncia['responsable'] = 'Sin asignar';
+            }
+        }
+        unset($denuncia); // Liberar referencia
+
         $data['denunciasAsignadas'] = $denunciasAsignadas;
         $data['totalAsignadas'] = $this->denunciasModel
             ->where('id_estado_actual !=', 1)
+            ->whereNotIn('id_estado_actual', [10, 11, 20, 21, 22]) // Excluir estados terminales
             ->where('verificado_en IS NOT NULL', null, false)
             ->countAllResults();
         $data['pager'] = $pager;
@@ -323,27 +350,41 @@ class Admin extends BaseController
             return redirect()->to(base_url('admin'));
         }
 
-        // Obtener todas las denuncias resueltas
-        $todasDenuncias = $this->denunciasModel->findAll();
-        $archivosDenuncias = $this->archivosDenunciasModel->findAll();
+        // Obtener denuncias en estados terminales con datos completos
+        $denunciasResueltas = $this->denunciasModel
+            ->select('denuncias.*, 
+                     estados_denuncia.nombre_estado,
+                     estados_denuncia.codigo as codigo_estado,
+                     areas.nombre_area,
+                     admin.nombre as nombre_responsable,
+                     admin.apellidoP as apellidoP_responsable,
+                     admin.apellidoM as apellidoM_responsable')
+            ->join('estados_denuncia', 'estados_denuncia.id_estado = denuncias.id_estado_actual', 'left')
+            ->join('areas', 'areas.id_area = denuncias.id_area_responsable', 'left')
+            ->join('admin', 'admin.id_adm = denuncias.id_usuario_asignado', 'left')
+            ->whereIn('denuncias.id_estado_actual', [10, 11, 20, 21, 22]) // Solo estados terminales: SANCIONADA, FINALIZADA, CONCLUIDA_NO_COMPETENTE, DESECHADA, ARCHIVADA
+            ->where('denuncias.verificado_en IS NOT NULL', null, false)
+            ->orderBy('denuncias.fecha_resolucion', 'DESC')
+            ->orderBy('denuncias.fecha_ultimo_cambio_estado', 'DESC')
+            ->findAll();
 
-        // Filtrar solo denuncias con estado 'Resuelta'
-        $denunciasResueltas = array_filter($todasDenuncias, function ($d) {
-            return mb_strtolower($d['estatus'] ?? '', 'UTF-8') === 'resuelta';
-        });
-
-        // Reindexar y ordenar por fecha de resolución (más recientes primero)
-        $denunciasResueltas = array_values($denunciasResueltas);
-        usort($denunciasResueltas, function ($a, $b) {
-            $fechaA = $a['fecha_resolucion'] ?? $a['fecha_actualizacion'] ?? '';
-            $fechaB = $b['fecha_resolucion'] ?? $b['fecha_actualizacion'] ?? '';
-            return strcmp($fechaB, $fechaA); // Orden descendente
-        });
+        // Construir campo responsable concatenando nombre completo
+        foreach ($denunciasResueltas as &$denuncia) {
+            if (!empty($denuncia['nombre_responsable'])) {
+                $denuncia['responsable'] = trim(
+                    $denuncia['nombre_responsable'] . ' ' . 
+                    ($denuncia['apellidoP_responsable'] ?? '') . ' ' . 
+                    ($denuncia['apellidoM_responsable'] ?? '')
+                );
+            } else {
+                $denuncia['responsable'] = 'Sin asignar';
+            }
+        }
+        unset($denuncia);
 
         $data = [
             'currentPage'        => 'archivo',
             'denuncias'          => $denunciasResueltas,
-            'archivosDenuncias'  => $archivosDenuncias,
             'adminNombre'        => session()->get('nombre'),
             'totalArchivadas'    => count($denunciasResueltas),
         ];
@@ -939,19 +980,39 @@ class Admin extends BaseController
             case 'ADM_GENERAL':
             case 'ADM_DA':
             case 'ADM':
-                // Administradores ven denuncias recibidas (sin paginar, pocas) y todas (paginadas)
+                // Administradores ven denuncias recibidas (sin paginar, pocas) y todas (paginadas) CON RELACIONES
                 $denunciasRecibidas = $this->denunciasModel
-                    ->where('id_estado_actual', 1) // RECIBIDA
-                    ->where('verificado_en IS NOT NULL', null, false)
-                    ->orderBy('verificado_en', 'DESC')
+                    ->select('denuncias.*, 
+                             estados_denuncia.nombre_estado,
+                             estados_denuncia.codigo as codigo_estado,
+                             areas.nombre_area,
+                             CONCAT(admin.nombre, " ", admin.apellidoP, " ", COALESCE(admin.apellidoM, "")) as responsable,
+                             tipo_denuncia.nombre as tipo_denuncia')
+                    ->join('estados_denuncia', 'estados_denuncia.id_estado = denuncias.id_estado_actual', 'left')
+                    ->join('areas', 'areas.id_area = denuncias.id_area_responsable', 'left')
+                    ->join('admin', 'admin.id_adm = denuncias.id_usuario_asignado', 'left')
+                    ->join('tipo_denuncia', 'tipo_denuncia.id_tipo_denuncia = denuncias.id_tipo_denuncia', 'left')
+                    ->where('denuncias.id_estado_actual', 1) // RECIBIDA
+                    ->where('denuncias.verificado_en IS NOT NULL', null, false)
+                    ->orderBy('denuncias.verificado_en', 'DESC')
                     ->findAll();
 
                 $totalRecibidas = count($denunciasRecibidas);
 
-                // Solo paginamos la tabla principal
+                // Solo paginamos la tabla principal con relaciones
                 $todasDenuncias = $this->denunciasModel
-                    ->where('verificado_en IS NOT NULL', null, false)
-                    ->orderBy('verificado_en', 'DESC')
+                    ->select('denuncias.*, 
+                             estados_denuncia.nombre_estado,
+                             estados_denuncia.codigo as codigo_estado,
+                             areas.nombre_area,
+                             CONCAT(admin.nombre, " ", admin.apellidoP, " ", COALESCE(admin.apellidoM, "")) as responsable,
+                             tipo_denuncia.nombre as tipo_denuncia')
+                    ->join('estados_denuncia', 'estados_denuncia.id_estado = denuncias.id_estado_actual', 'left')
+                    ->join('areas', 'areas.id_area = denuncias.id_area_responsable', 'left')
+                    ->join('admin', 'admin.id_adm = denuncias.id_usuario_asignado', 'left')
+                    ->join('tipo_denuncia', 'tipo_denuncia.id_tipo_denuncia = denuncias.id_tipo_denuncia', 'left')
+                    ->where('denuncias.verificado_en IS NOT NULL', null, false)
+                    ->orderBy('denuncias.verificado_en', 'DESC')
                     ->paginate(10);
                 $pager = $this->denunciasModel->pager;
 
@@ -963,35 +1024,75 @@ class Admin extends BaseController
                 ];
 
             case 'USR_DNS':
-                // DNS ve denuncias en estados DNS - Solo pagina tabla principal
+                // DNS ve denuncias en estados DNS - Solo pagina tabla principal CON RELACIONES
                 $denunciasTurnadas = $this->denunciasModel
-                    ->whereIn('id_estado_actual', [2]) // TURNADA_DNS
-                    ->where('id_area_responsable', 2) // Área DNS
-                    ->where('verificado_en IS NOT NULL', null, false)
-                    ->orderBy('verificado_en', 'DESC')
+                    ->select('denuncias.*, 
+                             estados_denuncia.nombre_estado,
+                             estados_denuncia.codigo as codigo_estado,
+                             areas.nombre_area,
+                             CONCAT(admin.nombre, " ", admin.apellidoP, " ", COALESCE(admin.apellidoM, "")) as responsable,
+                             tipo_denuncia.nombre as tipo_denuncia')
+                    ->join('estados_denuncia', 'estados_denuncia.id_estado = denuncias.id_estado_actual', 'left')
+                    ->join('areas', 'areas.id_area = denuncias.id_area_responsable', 'left')
+                    ->join('admin', 'admin.id_adm = denuncias.id_usuario_asignado', 'left')
+                    ->join('tipo_denuncia', 'tipo_denuncia.id_tipo_denuncia = denuncias.id_tipo_denuncia', 'left')
+                    ->whereIn('denuncias.id_estado_actual', [2]) // TURNADA_DNS
+                    ->where('denuncias.id_area_responsable', 2) // Área DNS
+                    ->where('denuncias.verificado_en IS NOT NULL', null, false)
+                    ->orderBy('denuncias.verificado_en', 'DESC')
                     ->paginate(10);
                 $pager = $this->denunciasModel->pager;
 
-                // Resto sin paginar (generalmente pocas)
+                // Resto sin paginar (generalmente pocas) CON RELACIONES
                 $misRevisiones = $this->denunciasModel
-                    ->whereIn('id_estado_actual', [3, 4]) // EN_REVISION_DNS, APROBADA_INSPECCION
-                    ->where('id_usuario_asignado', $usuario['id_adm'])
-                    ->where('verificado_en IS NOT NULL', null, false)
-                    ->orderBy('verificado_en', 'DESC')
+                    ->select('denuncias.*, 
+                             estados_denuncia.nombre_estado,
+                             estados_denuncia.codigo as codigo_estado,
+                             areas.nombre_area,
+                             CONCAT(admin.nombre, " ", admin.apellidoP, " ", COALESCE(admin.apellidoM, "")) as responsable,
+                             tipo_denuncia.nombre as tipo_denuncia')
+                    ->join('estados_denuncia', 'estados_denuncia.id_estado = denuncias.id_estado_actual', 'left')
+                    ->join('areas', 'areas.id_area = denuncias.id_area_responsable', 'left')
+                    ->join('admin', 'admin.id_adm = denuncias.id_usuario_asignado', 'left')
+                    ->join('tipo_denuncia', 'tipo_denuncia.id_tipo_denuncia = denuncias.id_tipo_denuncia', 'left')
+                    ->whereIn('denuncias.id_estado_actual', [3, 4]) // EN_REVISION_DNS, APROBADA_INSPECCION
+                    ->where('denuncias.id_usuario_asignado', $usuario['id_adm'])
+                    ->where('denuncias.verificado_en IS NOT NULL', null, false)
+                    ->orderBy('denuncias.verificado_en', 'DESC')
                     ->findAll();
 
                 $regresadasDS = $this->denunciasModel
-                    ->whereIn('id_estado_actual', [8]) // REGRESADA_DNS
-                    ->where('id_area_responsable', 2)
-                    ->where('verificado_en IS NOT NULL', null, false)
-                    ->orderBy('verificado_en', 'DESC')
+                    ->select('denuncias.*, 
+                             estados_denuncia.nombre_estado,
+                             estados_denuncia.codigo as codigo_estado,
+                             areas.nombre_area,
+                             CONCAT(admin.nombre, " ", admin.apellidoP, " ", COALESCE(admin.apellidoM, "")) as responsable,
+                             tipo_denuncia.nombre as tipo_denuncia')
+                    ->join('estados_denuncia', 'estados_denuncia.id_estado = denuncias.id_estado_actual', 'left')
+                    ->join('areas', 'areas.id_area = denuncias.id_area_responsable', 'left')
+                    ->join('admin', 'admin.id_adm = denuncias.id_usuario_asignado', 'left')
+                    ->join('tipo_denuncia', 'tipo_denuncia.id_tipo_denuncia = denuncias.id_tipo_denuncia', 'left')
+                    ->whereIn('denuncias.id_estado_actual', [8]) // REGRESADA_DNS
+                    ->where('denuncias.id_area_responsable', 2)
+                    ->where('denuncias.verificado_en IS NOT NULL', null, false)
+                    ->orderBy('denuncias.verificado_en', 'DESC')
                     ->findAll();
 
                 $enSancion = $this->denunciasModel
-                    ->whereIn('id_estado_actual', [9, 10]) // EN_ELABORACION_SANCION, SANCIONADA
+                    ->select('denuncias.*, 
+                             estados_denuncia.nombre_estado,
+                             estados_denuncia.codigo as codigo_estado,
+                             areas.nombre_area,
+                             CONCAT(admin.nombre, " ", admin.apellidoP, " ", COALESCE(admin.apellidoM, "")) as responsable,
+                             tipo_denuncia.nombre as tipo_denuncia')
+                    ->join('estados_denuncia', 'estados_denuncia.id_estado = denuncias.id_estado_actual', 'left')
+                    ->join('areas', 'areas.id_area = denuncias.id_area_responsable', 'left')
+                    ->join('admin', 'admin.id_adm = denuncias.id_usuario_asignado', 'left')
+                    ->join('tipo_denuncia', 'tipo_denuncia.id_tipo_denuncia = denuncias.id_tipo_denuncia', 'left')
+                    ->whereIn('denuncias.id_estado_actual', [9, 10]) // EN_ELABORACION_SANCION, SANCIONADA
                     // ->where('id_usuario_asignado', $usuario['id_adm'])
-                    ->where('verificado_en IS NOT NULL', null, false)
-                    ->orderBy('verificado_en', 'DESC')
+                    ->where('denuncias.verificado_en IS NOT NULL', null, false)
+                    ->orderBy('denuncias.verificado_en', 'DESC')
                     ->findAll();
 
                 // Cargar motivos de rechazo para Flujo B
@@ -1010,28 +1111,58 @@ class Admin extends BaseController
                 ];
 
             case 'USR_DS':
-                // DS ve denuncias en estados DS - Solo pagina tabla principal
+                // DS ve denuncias en estados DS - Solo pagina tabla principal CON RELACIONES
                 $denunciasTurnadas = $this->denunciasModel
-                    ->whereIn('id_estado_actual', [5]) // TURNADA_DS
-                    ->where('id_area_responsable', 1) // Área DS
-                    ->where('verificado_en IS NOT NULL', null, false)
-                    ->orderBy('verificado_en', 'DESC')
+                    ->select('denuncias.*, 
+                             estados_denuncia.nombre_estado,
+                             estados_denuncia.codigo as codigo_estado,
+                             areas.nombre_area,
+                             CONCAT(admin.nombre, " ", admin.apellidoP, " ", COALESCE(admin.apellidoM, "")) as responsable,
+                             tipo_denuncia.nombre as tipo_denuncia')
+                    ->join('estados_denuncia', 'estados_denuncia.id_estado = denuncias.id_estado_actual', 'left')
+                    ->join('areas', 'areas.id_area = denuncias.id_area_responsable', 'left')
+                    ->join('admin', 'admin.id_adm = denuncias.id_usuario_asignado', 'left')
+                    ->join('tipo_denuncia', 'tipo_denuncia.id_tipo_denuncia = denuncias.id_tipo_denuncia', 'left')
+                    ->whereIn('denuncias.id_estado_actual', [5]) // TURNADA_DS
+                    ->where('denuncias.id_area_responsable', 1) // Área DS
+                    ->where('denuncias.verificado_en IS NOT NULL', null, false)
+                    ->orderBy('denuncias.verificado_en', 'DESC')
                     ->paginate(10);
                 $pager = $this->denunciasModel->pager;
 
-                // Inspecciones sin paginar (generalmente pocas por usuario)
+                // Inspecciones sin paginar (generalmente pocas por usuario) CON RELACIONES
                 $inspeccionesActivas = $this->denunciasModel
-                    ->where('id_estado_actual', 6) // EN_INSPECCION
-                    ->where('id_usuario_asignado', $usuario['id_adm'])
-                    ->where('verificado_en IS NOT NULL', null, false)
-                    ->orderBy('verificado_en', 'DESC')
+                    ->select('denuncias.*, 
+                             estados_denuncia.nombre_estado,
+                             estados_denuncia.codigo as codigo_estado,
+                             areas.nombre_area,
+                             CONCAT(admin.nombre, " ", admin.apellidoP, " ", COALESCE(admin.apellidoM, "")) as responsable,
+                             tipo_denuncia.nombre as tipo_denuncia')
+                    ->join('estados_denuncia', 'estados_denuncia.id_estado = denuncias.id_estado_actual', 'left')
+                    ->join('areas', 'areas.id_area = denuncias.id_area_responsable', 'left')
+                    ->join('admin', 'admin.id_adm = denuncias.id_usuario_asignado', 'left')
+                    ->join('tipo_denuncia', 'tipo_denuncia.id_tipo_denuncia = denuncias.id_tipo_denuncia', 'left')
+                    ->where('denuncias.id_estado_actual', 6) // EN_INSPECCION
+                    ->where('denuncias.id_usuario_asignado', $usuario['id_adm'])
+                    ->where('denuncias.verificado_en IS NOT NULL', null, false)
+                    ->orderBy('denuncias.verificado_en', 'DESC')
                     ->findAll();
 
                 $inspeccionesConcluidas = $this->denunciasModel
-                    ->where('id_estado_actual', 7) // INSPECCION_CONCLUIDA
-                    ->where('id_usuario_asignado', $usuario['id_adm'])
-                    ->where('verificado_en IS NOT NULL', null, false)
-                    ->orderBy('verificado_en', 'DESC')
+                    ->select('denuncias.*, 
+                             estados_denuncia.nombre_estado,
+                             estados_denuncia.codigo as codigo_estado,
+                             areas.nombre_area,
+                             CONCAT(admin.nombre, " ", admin.apellidoP, " ", COALESCE(admin.apellidoM, "")) as responsable,
+                             tipo_denuncia.nombre as tipo_denuncia')
+                    ->join('estados_denuncia', 'estados_denuncia.id_estado = denuncias.id_estado_actual', 'left')
+                    ->join('areas', 'areas.id_area = denuncias.id_area_responsable', 'left')
+                    ->join('admin', 'admin.id_adm = denuncias.id_usuario_asignado', 'left')
+                    ->join('tipo_denuncia', 'tipo_denuncia.id_tipo_denuncia = denuncias.id_tipo_denuncia', 'left')
+                    ->where('denuncias.id_estado_actual', 7) // INSPECCION_CONCLUIDA
+                    ->where('denuncias.id_usuario_asignado', $usuario['id_adm'])
+                    ->where('denuncias.verificado_en IS NOT NULL', null, false)
+                    ->orderBy('denuncias.verificado_en', 'DESC')
                     ->findAll();
 
                 return [
@@ -1042,10 +1173,20 @@ class Admin extends BaseController
                 ];
 
             default:
-                // Usuario consulta: todas las denuncias en solo lectura
+                // Usuario consulta: todas las denuncias en solo lectura CON RELACIONES
                 $todasDenuncias = $this->denunciasModel
-                    ->where('verificado_en IS NOT NULL', null, false)
-                    ->orderBy('verificado_en', 'DESC')
+                    ->select('denuncias.*, 
+                             estados_denuncia.nombre_estado,
+                             estados_denuncia.codigo as codigo_estado,
+                             areas.nombre_area,
+                             CONCAT(admin.nombre, " ", admin.apellidoP, " ", COALESCE(admin.apellidoM, "")) as responsable,
+                             tipo_denuncia.nombre as tipo_denuncia')
+                    ->join('estados_denuncia', 'estados_denuncia.id_estado = denuncias.id_estado_actual', 'left')
+                    ->join('areas', 'areas.id_area = denuncias.id_area_responsable', 'left')
+                    ->join('admin', 'admin.id_adm = denuncias.id_usuario_asignado', 'left')
+                    ->join('tipo_denuncia', 'tipo_denuncia.id_tipo_denuncia = denuncias.id_tipo_denuncia', 'left')
+                    ->where('denuncias.verificado_en IS NOT NULL', null, false)
+                    ->orderBy('denuncias.verificado_en', 'DESC')
                     ->paginate(10);
                 $pager = $this->denunciasModel->pager;
 
@@ -2209,6 +2350,22 @@ class Admin extends BaseController
             ]);
         }
 
+        // Validar que solo se emita sanción desde estado REGRESADA_DNS (8)
+        if ($denuncia['id_estado_actual'] != 8) {
+            return $this->response->setJSON([
+                'success' => false,
+                'message' => 'Solo se pueden sancionar casos regresados de inspección (estado REGRESADA_DNS)'
+            ]);
+        }
+
+        // Validar que no esté ya sancionada (evitar doble sanción)
+        if ($denuncia['id_estado_actual'] == 10) {
+            return $this->response->setJSON([
+                'success' => false,
+                'message' => 'Este caso ya fue sancionado'
+            ]);
+        }
+
         try {
             $db = \Config\Database::connect();
             $db->transStart();
@@ -2300,8 +2457,11 @@ class Admin extends BaseController
     }
 
     /**
-     * Finalizar caso (cerrar sin sanción)
+     * Finalizar caso (cerrar SIN sanción cuando no procede)
      * POST /admin/finalizarCaso
+     * 
+     * SOLO para casos que regresan de inspección donde se determina que NO procede sanción.
+     * Si procede sanción, usar emitirSancion() en su lugar.
      * 
      * @return \CodeIgniter\HTTP\ResponseInterface JSON response
      */
@@ -2341,6 +2501,14 @@ class Admin extends BaseController
             ]);
         }
 
+        // Validar que solo se finalice desde estado REGRESADA_DNS (8)
+        if ($denuncia['id_estado_actual'] != 8) {
+            return $this->response->setJSON([
+                'success' => false,
+                'message' => 'Solo se pueden finalizar casos regresados de inspección (estado REGRESADA_DNS)'
+            ]);
+        }
+
         try {
             $db = \Config\Database::connect();
             $db->transStart();
@@ -2377,7 +2545,7 @@ class Admin extends BaseController
 
             // Actualizar a FINALIZADA
             $this->denunciasModel->update($idDenuncia, [
-                'id_estado_actual' => 15, // FINALIZADA
+                'id_estado_actual' => 11, // FINALIZADA (corregido: era 15 que no existe)
                 'fecha_finalizacion' => date('Y-m-d H:i:s'),
                 'observaciones_finalizacion' => $observaciones
             ]);
