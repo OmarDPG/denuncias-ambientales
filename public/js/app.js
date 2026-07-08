@@ -1260,59 +1260,63 @@ function searchReport() {
             return res.json();
         })
         .then(function (data) {
-            console.log('Datos recibidos del servidor:', data); // Log de depuración
+            console.log('Datos recibidos del servidor:', data);
             
             if (data.found) {
-                document.getElementById('resultFolio').textContent          = data.folio;
-                document.getElementById('resultTipo').textContent           = data.tipo_denuncia;
-                document.getElementById('resultFecha').textContent          = data.fecha_captura;
-                document.getElementById('resultActualizacion').textContent  = data.fecha_actualizacion;
-                document.getElementById('resultDescripcion').textContent    = data.notas_internas || 'Consulte con el personal de atención para más detalles sobre el estado de su denuncia.';
+                // Actualizar información básica
+                document.getElementById('reportFolio').textContent = data.folio;
+                document.getElementById('reportTipoDenuncia').textContent = data.tipo_denuncia;
+                document.getElementById('reportFechaCaptura').textContent = data.fecha_captura;
+                document.getElementById('reportFechaActualizacion').textContent = data.fecha_actualizacion;
+                
+                // Actualizar estado con icono y descripción
+                const statusIcon = document.getElementById('reportStatusIcon');
+                const statusIconSymbol = document.getElementById('reportStatusIconSymbol');
+                const statusText = document.getElementById('reportStatusText');
+                const statusDesc = document.getElementById('reportStatusDesc');
+                
+                statusIconSymbol.textContent = data.estatus.icon;
+                statusText.textContent = data.estatus.text;
+                statusDesc.textContent = data.estatus.descripcion;
+                statusIcon.className = 'w-16 h-16 rounded-full flex items-center justify-center text-white text-3xl shadow-lg status-icon-' + data.estatus.class;
+                
+                // Mostrar u ocultar notas internas
+                const notasContainer = document.getElementById('reportNotasContainer');
+                const reportNotas = document.getElementById('reportNotas');
+                if (data.notas_internas && data.notas_internas.trim() !== '') {
+                    reportNotas.textContent = data.notas_internas;
+                    notasContainer.style.display = 'flex';
+                } else {
+                    notasContainer.style.display = 'none';
+                }
 
-                const statusBadge = document.getElementById('resultStatus');
-                statusBadge.className = 'status-badge status-' + data.estatus.class;
-                statusBadge.innerHTML =
-                    `<span class="material-symbols-outlined text-sm" style="font-variation-settings: 'FILL' 1;">${data.estatus.icon}</span>` +
-                    `<span>${data.estatus.text}</span>`;
-
-                // Mostrar documento de resolución si existe
+                // Mostrar documento de resolución solo si es terminal Y existe documento
                 const documentoContainer = document.getElementById('documentoResolucionContainer');
                 const documentoDetalle = document.getElementById('documentoResolucionDetalle');
                 
-                console.log('Documento de resolución:', data.documento_resolucion); // Log de depuración
+                console.log('Es terminal:', data.es_terminal, 'Documento:', data.documento_resolucion);
                 
-                if (data.documento_resolucion) {
+                if (data.es_terminal && data.documento_resolucion) {
                     const doc = data.documento_resolucion;
                     
                     // Determinar icono según tipo de archivo
                     let iconName = 'description';
-                    if (doc.tipo.includes('pdf')) iconName = 'picture_as_pdf';
-                    else if (doc.tipo.includes('image')) iconName = 'image';
+                    if (doc.tipo && doc.tipo.includes('pdf')) iconName = 'picture_as_pdf';
+                    else if (doc.tipo && doc.tipo.includes('image')) iconName = 'image';
                     
-                    // Formatear tamaño
-                    const formatBytes = (bytes) => {
-                        if (bytes === 0) return '0 Bytes';
-                        const k = 1024;
-                        const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-                        const i = Math.floor(Math.log(bytes) / Math.log(k));
-                        return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
-                    };
-                    
-                    const urlDescarga = getBaseUrl() + `inicio/descargarDocumentoResolucion/${doc.id}?download=1`;
-                    const urlVer = getBaseUrl() + `inicio/descargarDocumentoResolucion/${doc.id}`;
-                    const canPreview = doc.tipo.includes('pdf') || doc.tipo.includes('image');
+                    const canPreview = doc.tipo && (doc.tipo.includes('pdf') || doc.tipo.includes('image'));
                     
                     documentoDetalle.innerHTML = `
                         <div class="flex items-center gap-3 flex-1">
                             <span class="material-symbols-outlined text-primary text-2xl">${iconName}</span>
                             <div class="flex-1">
                                 <p class="font-medium text-on-surface text-sm">${doc.nombre}</p>
-                                <p class="text-xs text-secondary mt-1">${formatBytes(doc.peso)} • Oficio de Resolución</p>
+                                <p class="text-xs text-secondary mt-1">Subido el ${doc.fecha} • Documento Oficial</p>
                             </div>
                         </div>
                         <div class="flex gap-2">
                             ${canPreview ? `
-                                <a href="${urlVer}" 
+                                <a href="${doc.url_vista}" 
                                    target="_blank"
                                    class="flex items-center gap-1 px-3 py-2 bg-surface-container text-primary border border-outline-variant/30 rounded-lg text-xs font-bold hover:bg-surface-container-high transition-all"
                                    title="Abrir en nueva pestaña">
@@ -1320,7 +1324,7 @@ function searchReport() {
                                     Ver
                                 </a>
                             ` : ''}
-                            <a href="${urlDescarga}" 
+                            <a href="${doc.url_descarga}" 
                                class="flex items-center gap-1 px-3 py-2 bg-primary text-white rounded-lg text-xs font-bold hover:opacity-90 transition-all"
                                title="Descargar documento">
                                 <span class="material-symbols-outlined text-sm">download</span>

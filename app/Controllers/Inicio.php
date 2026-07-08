@@ -693,40 +693,98 @@ class Inicio extends BaseController
         $folio = strtoupper(trim((string) ($this->request->getGet('folio') ?? '')));
 
         // Solo permite caracteres válidos de folio (evita SQLi / path traversal)
-        if ($folio === '' || !preg_match('/^[A-Z0-9\-]{1,30}$/', $folio)) {
+        // Formato esperado: SMADSOT.SAQDE-0035/2026
+        if ($folio === '' || !preg_match('/^[A-Z0-9\.\-\/]{1,50}$/', $folio)) {
             return $this->response->setJSON(['found' => false]);
         }
 
-        $denuncia = $this->denunciasModel
-            ->select('id_denuncia, folio, estatus, tipo_denuncia, fecha_captura, fecha_resolucion, notas_internas')
-            ->where('folio', $folio)
-            ->first();
+        // Obtener denuncia con información del estado desde estados_denuncia
+        $db = \Config\Database::connect();
+        $builder = $db->table('denuncias d');
+        $builder->select('d.id_denuncia, d.folio, d.estatus, d.tipo_denuncia, d.fecha_captura, 
+                         d.fecha_resolucion, d.notas_internas, d.id_estado_actual,
+                         e.nombre_estado, e.es_terminal, e.requiere_documento, e.color_ui')
+                ->join('estados_denuncia e', 'd.id_estado_actual = e.id_estado', 'left')
+                ->where('d.folio', $folio)
+                ->where('e.activo', 1); // Solo estados activos
+        
+        $denuncia = $builder->get()->getRowArray();
 
         if (!$denuncia) {
             return $this->response->setJSON(['found' => false]);
         }
 
-        $estatusMap = [
-            'Pendiente de Verificación' => ['text' => 'Pendiente de Verificación', 'icon' => 'pending', 'class' => 'pendiente-verificacion'],
-            'Nueva'         => ['text' => 'Recibida',    'icon' => 'inbox',        'class' => 'recibida'],
-            'En Revisión'   => ['text' => 'En Revisión', 'icon' => 'pending',      'class' => 'en-revision'],
-            'Investigación' => ['text' => 'Investigación',  'icon' => 'schedule',     'class' => 'investigacion'],
-            'Resuelta'      => ['text' => 'Resuelta',    'icon' => 'check_circle', 'class' => 'resuelta'],
-            'Desechada'     => ['text' => 'Desechada',   'icon' => 'cancel',       'class' => 'desechada'],
-        ];
+        // Determinar el estatus a mostrar según la lógica simplificada
+        $idEstado = $denuncia['id_estado_actual'];
+        $esTerminal = (bool) $denuncia['es_terminal'];
+        $requiereDocumento = (bool) $denuncia['requiere_documento'];
+        
+        // Lógica de estados concisos
+        if ($idEstado === 1) {
+            // Estado 1: Recibida
+            $estatusInfo = [
+                'text' => 'Recibida',
+                'icon' => 'inbox',
+                'class' => 'recibida',
+                'descripcion' => 'Su denuncia ha sido recibida y está pendiente de análisis'
+            ];
+        } elseif ($idEstado >= 2 && $idEstado <= 9) {
+            // Estados 2-9: En Inspección (proceso)
+            $estatusInfo = [
+                'text' => 'En Inspección',
+                'icon' => 'search',
+                'class' => 'en-inspeccion',
+                'descripcion' => 'Su denuncia está siendo revisada e inspeccionada'
+            ];
+        } elseif ($esTerminal) {
+            // Estados terminales: mostrar nombre real
+            $iconMap = [
+                'SANCIONADA' => 'gavel',
+                'FINALIZADA' => 'check_circle',
+                'CONCLUIDA_NO_COMPETENTE' => 'info',
+                'DESECHADA' => 'cancel',
+                'ARCHIVADA' => 'archive'
+            ];
+            $classMap = [
+                'SANCIONADA' => 'sancionada',
+                'FINALIZADA' => 'finalizada',
+                'CONCLUIDA_NO_COMPETENTE' => 'no-competente',
+                'DESECHADA' => 'desechada',
+                'ARCHIVADA' => 'archivada'
+            ];
+            
+            // Buscar código del estado para mapear icono
+            $codigoEstado = $db->table('estados_denuncia')
+                ->select('codigo')
+                ->where('id_estado', $idEstado)
+                ->get()
+                ->getRow()
+                ->codigo ?? '';
+            
+            $estatusInfo = [
+                'text' => $denuncia['nombre_estado'],
+                'icon' => $iconMap[$codigoEstado] ?? 'info',
+                'class' => $classMap[$codigoEstado] ?? 'terminal',
+                'descripcion' => 'Su denuncia ha sido finalizada'
+            ];
+        } else {
+            // Estado desconocido o suspendido
+            $estatusInfo = [
+                'text' => $denuncia['nombre_estado'] ?? 'En Proceso',
+                'icon' => 'schedule',
+                'class' => 'en-proceso',
+                'descripcion' => 'Su denuncia está en proceso'
+            ];
+        }
 
-        $estatusInfo = $estatusMap[$denuncia['estatus']]
-            ?? ['text' => $denuncia['estatus'], 'icon' => 'info', 'class' => 'recibida'];
-
-        // Si el estado es Resuelto, obtener el documento de resolución
+        // Si el estado es terminal y requiere documento, obtener el documento de resolución
         $documentoResolucion = null;
-        $estatusLower = mb_strtolower($denuncia['estatus'], 'UTF-8');
+        
+        if ($esTerminal && $requiereDocumento) {
+            // Log para depuración
+            log_message('debug', "Buscando documento de resolución para denuncia {$denuncia['folio']} (Estado: {$denuncia['nombre_estado']}, Terminal: {$esTerminal}, Requiere Doc: {$requiereDocumento})");
 
-        // Log para depuración
-        log_message('debug', "Buscando documento para denuncia {$denuncia['folio']} con estatus: '{$denuncia['estatus']}' (lower: '{$estatusLower}')");
-
-        if ($estatusLower === 'resuelto' || $estatusLower === 'resuelta') {
-            // Obtener el documento marcado como 'Resolución' (buscar ambas variantes por si acaso)
+            // Obtener el documento marcado como 'Resolución'
             $documento = $this->archivosDenunciasModel
                 ->where('id_denuncia', $denuncia['id_denuncia'])
                 ->groupStart()
@@ -736,15 +794,16 @@ class Inicio extends BaseController
                 ->orderBy('id_evidencia', 'DESC')
                 ->first();
 
-            log_message('debug', "Documentos encontrados: " . ($documento ? json_encode($documento) : 'ninguno'));
+            log_message('debug', "Documento encontrado: " . ($documento ? json_encode($documento) : 'ninguno'));
 
             if ($documento) {
                 $documentoResolucion = [
-                    'id'             => $documento['id_evidencia'],
-                    'nombre'         => $documento['nombre_original'],
-                    'tipo'           => $documento['tipo_archivo'],
-                    'peso'           => $documento['peso_bytes'],
-                    'fecha_subida'   => $documento['fecha_subida'],
+                    'id' => $documento['id_evidencia'],
+                    'nombre' => $documento['nombre_original'],
+                    'tipo' => $documento['tipo_archivo'],
+                    'fecha' => date('d/m/Y H:i', strtotime($documento['fecha_subido'])),
+                    'url_descarga' => base_url('inicio/descargarDocumentoResolucion/' . $documento['id_evidencia']),
+                    'url_vista' => base_url('inicio/descargarDocumentoResolucion/' . $documento['id_evidencia'] . '?download=0')
                 ];
             }
         }
@@ -759,6 +818,7 @@ class Inicio extends BaseController
             'fecha_actualizacion' => $denuncia['fecha_resolucion']
                 ? date('d \d\e F, Y', strtotime($denuncia['fecha_resolucion']))
                 : date('d \d\e F, Y', strtotime($denuncia['fecha_captura'])),
+            'es_terminal'         => $esTerminal,
             'documento_resolucion' => $documentoResolucion,
         ]);
     }

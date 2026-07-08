@@ -559,53 +559,64 @@
             <div id="reportResult" style="display: none;" class="space-y-6 animate-fadeIn">
                 <div class="bg-surface-container-low rounded-xl p-6 space-y-4">
                     <div class="flex items-center justify-between">
-                        <div>
-                            <p class="text-xs text-secondary uppercase tracking-wider">Folio</p>
-                            <p id="resultFolio" class="font-headline font-bold text-xl text-primary">SMADSOT.SAQDE-1234/2026</p>
-                        </div>
-                        <div id="resultStatus" class="status-badge status-en-revision">
-                            <span class="material-symbols-outlined text-sm" style="font-variation-settings: 'FILL' 1;">pending</span>
-                            <span>En Revisión</span>
+                        <div class="flex items-center gap-4">
+                            <div id="reportStatusIcon" class="w-16 h-16 rounded-full flex items-center justify-center text-white text-3xl shadow-lg status-icon-recibida">
+                                <span class="material-symbols-outlined" id="reportStatusIconSymbol">inbox</span>
+                            </div>
+                            <div>
+                                <h3 id="reportFolio" class="font-headline font-bold text-xl text-primary">SMADSOT.SAQDE-1234/2026</h3>
+                                <p id="reportStatusText" class="text-secondary text-sm font-medium">Recibida</p>
+                                <p id="reportStatusDesc" class="text-secondary text-xs mt-1 opacity-75">Su denuncia ha sido recibida</p>
+                            </div>
                         </div>
                     </div>
 
                     <div class="border-t border-outline-variant/20 pt-4 space-y-3">
-                        <div>
-                            <p class="text-xs text-secondary uppercase tracking-wider">Tipo de Denuncia</p>
-                            <p id="resultTipo" class="font-medium text-on-surface">Impacto Ambiental</p>
+                        <div class="flex items-start gap-3">
+                            <span class="material-symbols-outlined text-primary text-xl mt-0.5">category</span>
+                            <div class="flex-1">
+                                <p class="text-xs text-secondary uppercase tracking-wider font-bold">Tipo de Denuncia</p>
+                                <p id="reportTipoDenuncia" class="text-sm text-primary font-medium">Impacto Ambiental</p>
+                            </div>
                         </div>
-                        <div>
-                            <p class="text-xs text-secondary uppercase tracking-wider">Fecha de Registro</p>
-                            <p id="resultFecha" class="font-medium text-on-surface">15 de Marzo, 2026</p>
+                        <div class="flex items-start gap-3">
+                            <span class="material-symbols-outlined text-primary text-xl mt-0.5">calendar_today</span>
+                            <div class="flex-1">
+                                <p class="text-xs text-secondary uppercase tracking-wider font-bold">Fecha de Registro</p>
+                                <p id="reportFechaCaptura" class="text-sm text-primary font-medium">15 de Marzo, 2026</p>
+                            </div>
                         </div>
-                        <div>
-                            <p class="text-xs text-secondary uppercase tracking-wider">Última Actualización</p>
-                            <p id="resultActualizacion" class="font-medium text-on-surface">28 de Marzo, 2026</p>
+                        <div class="flex items-start gap-3">
+                            <span class="material-symbols-outlined text-primary text-xl mt-0.5">update</span>
+                            <div class="flex-1">
+                                <p class="text-xs text-secondary uppercase tracking-wider font-bold">Última Actualización</p>
+                                <p id="reportFechaActualizacion" class="text-sm text-primary font-medium">28 de Marzo, 2026</p>
+                            </div>
                         </div>
-                        <div>
-                            <p class="text-xs text-secondary uppercase tracking-wider">Descripción del Estado</p>
-                            <p id="resultDescripcion" class="text-sm text-on-surface-variant leading-relaxed">
-                                Su denuncia ha sido recibida y se encuentra en proceso de revisión por nuestro equipo técnico.
-                                Le notificaremos cualquier actualización.
-                            </p>
+                        <div id="reportNotasContainer" class="flex items-start gap-3" style="display: none;">
+                            <span class="material-symbols-outlined text-primary text-xl mt-0.5">note</span>
+                            <div class="flex-1">
+                                <p class="text-xs text-secondary uppercase tracking-wider font-bold">Notas</p>
+                                <p id="reportNotas" class="text-sm text-primary font-medium"></p>
+                            </div>
                         </div>
                     </div>
                 </div>
 
-                <!-- Documento de Resolución (solo visible cuando estado es Resuelto) -->
+                <!-- Documento de Resolución (solo visible cuando estado es terminal y hay documento) -->
                 <div id="documentoResolucionContainer" style="display: none;" class="bg-tertiary-fixed/10 border-2 border-tertiary-fixed rounded-xl p-6 space-y-4">
                     <div class="flex items-center gap-3 mb-4">
-                        <div class="w-10 h-10 bg-tertiary-fixed rounded-full flex items-center justify-center">
-                            <span class="material-symbols-outlined text-on-tertiary-fixed" style="font-variation-settings: 'FILL' 1;">check_circle</span>
+                        <div class="w-12 h-12 bg-tertiary-fixed rounded-full flex items-center justify-center text-on-tertiary-fixed">
+                            <span class="material-symbols-outlined text-2xl">description</span>
                         </div>
                         <div>
-                            <h4 class="font-headline font-bold text-primary">Documento de Resolución Disponible</h4>
-                            <p class="text-xs text-secondary">Su denuncia ha sido resuelta oficialmente</p>
+                            <h4 class="font-headline font-bold text-lg text-primary">Documento de Resolución</h4>
+                            <p class="text-xs text-secondary">Su denuncia ha sido finalizada. Descargue el documento oficial.</p>
                         </div>
                     </div>
                     
                     <div id="documentoResolucionDetalle" class="flex items-center justify-between gap-4 p-4 bg-surface-container-lowest rounded-lg border border-outline-variant/20">
-                        <!-- El contenido se llenará dinámicamente con JavaScript -->
+                        <!-- Contenido dinámico del documento -->
                     </div>
                 </div>
 

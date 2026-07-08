@@ -238,6 +238,39 @@
       color: #2e7d32;
     }
 
+    /* Estilos para iconos de estado en modal de reportes */
+    .status-icon-recibida {
+      background: linear-gradient(135deg, #6B7280 0%, #9CA3AF 100%);
+    }
+
+    .status-icon-en-inspeccion {
+      background: linear-gradient(135deg, #F59E0B 0%, #FBBF24 100%);
+    }
+
+    .status-icon-sancionada {
+      background: linear-gradient(135deg, #DC2626 0%, #EF4444 100%);
+    }
+
+    .status-icon-finalizada {
+      background: linear-gradient(135deg, #059669 0%, #10B981 100%);
+    }
+
+    .status-icon-no-competente {
+      background: linear-gradient(135deg, #6B7280 0%, #9CA3AF 100%);
+    }
+
+    .status-icon-desechada {
+      background: linear-gradient(135deg, #9CA3AF 0%, #D1D5DB 100%);
+    }
+
+    .status-icon-archivada {
+      background: linear-gradient(135deg, #9CA3AF 0%, #D1D5DB 100%);
+    }
+
+    .status-icon-terminal {
+      background: linear-gradient(135deg, #6366F1 0%, #8B5CF6 100%);
+    }
+
     /* Preview Modal specific styles */
     #previewModal .modal-content {
       max-width: 1200px;
