@@ -233,25 +233,60 @@ $adminEsAdmin  = (bool) session()->get('adm');
                     <form id="addUserForm" class="space-y-6" novalidate>
                         <?= csrf_field() ?>
 
-                        <div class="space-y-2">
-                            <label for="addNombreCompleto" class="font-headline font-bold text-sm text-primary uppercase tracking-wider">
-                                Nombre Completo <span class="text-error" aria-hidden="true">*</span>
-                            </label>
-                            <input type="text" id="addNombreCompleto" name="nombre" required
-                                class="w-full px-4 py-3 bg-surface-container border border-outline-variant/30 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
-                                placeholder="Ej: María García López" autocomplete="name" />
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div class="space-y-2">
+                                <label for="addNombre" class="font-headline font-bold text-sm text-primary uppercase tracking-wider">
+                                    Nombre(s) <span class="text-error" aria-hidden="true">*</span>
+                                </label>
+                                <input type="text" id="addNombre" name="nombre" required
+                                    class="w-full px-4 py-3 bg-surface-container border border-outline-variant/30 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+                                    placeholder="Ej: María" autocomplete="given-name" />
+                            </div>
+                            <div class="space-y-2">
+                                <label for="addApellidoP" class="font-headline font-bold text-sm text-primary uppercase tracking-wider">
+                                    Apellido Paterno <span class="text-error" aria-hidden="true">*</span>
+                                </label>
+                                <input type="text" id="addApellidoP" name="apellidoP" required
+                                    class="w-full px-4 py-3 bg-surface-container border border-outline-variant/30 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+                                    placeholder="Ej: García" autocomplete="family-name" />
+                            </div>
+                            <div class="space-y-2">
+                                <label for="addApellidoM" class="font-headline font-bold text-sm text-primary uppercase tracking-wider">
+                                    Apellido Materno
+                                </label>
+                                <input type="text" id="addApellidoM" name="apellidoM"
+                                    class="w-full px-4 py-3 bg-surface-container border border-outline-variant/30 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+                                    placeholder="Ej: López" />
+                            </div>
                         </div>
 
-                        <div class="space-y-2">
-                            <label for="addCargo" class="font-headline font-bold text-sm text-primary uppercase tracking-wider">
-                                Cargo <span class="text-error" aria-hidden="true">*</span>
-                            </label>
-                            <select id="addCargo" name="adm" required
-                                class="w-full px-4 py-3 bg-surface-container border border-outline-variant/30 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent">
-                                <option value="">Seleccione un cargo...</option>
-                                <option value="1">Administrador</option>
-                                <option value="0">Inspector</option>
-                            </select>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div class="space-y-2">
+                                <label for="addCargo" class="font-headline font-bold text-sm text-primary uppercase tracking-wider">
+                                    Cargo / Nivel de Acceso <span class="text-error" aria-hidden="true">*</span>
+                                </label>
+                                <select id="addCargo" name="adm" required
+                                    class="w-full px-4 py-3 bg-surface-container border border-outline-variant/30 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent">
+                                    <option value="">Seleccione un cargo...</option>
+                                    <option value="1">Administrador (Total)</option>
+                                    <option value="0">Inspector / Usuario</option>
+                                </select>
+                            </div>
+
+                            <div class="space-y-2">
+                                <label for="addRol" class="font-headline font-bold text-sm text-primary uppercase tracking-wider">
+                                    Rol en el Sistema <span class="text-error" aria-hidden="true">*</span>
+                                </label>
+                                <select id="addRol" name="id_rol" required
+                                    class="w-full px-4 py-3 bg-surface-container border border-outline-variant/30 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent">
+                                    <option value="">Seleccione un rol...</option>
+                                    <?php if (!empty($roles)): ?>
+                                        <?php foreach($roles as $rolItem): ?>
+                                            <option value="<?= esc($rolItem['id_rol']) ?>"><?= esc($rolItem['nombre']) ?></option>
+                                        <?php endforeach; ?>
+                                    <?php endif; ?>
+                                </select>
+                            </div>
                         </div>
 
                         <div class="space-y-2">
@@ -338,25 +373,60 @@ $adminEsAdmin  = (bool) session()->get('adm');
                         <?= csrf_field() ?>
                         <input type="hidden" id="editUserId" name="id_adm" />
 
-                        <div class="space-y-2">
-                            <label for="editNombreCompleto" class="font-headline font-bold text-sm text-primary uppercase tracking-wider">
-                                Nombre Completo <span class="text-error" aria-hidden="true">*</span>
-                            </label>
-                            <input type="text" id="editNombreCompleto" name="nombre" required
-                                class="w-full px-4 py-3 bg-surface-container border border-outline-variant/30 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
-                                placeholder="Ej: María García López" autocomplete="name" />
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div class="space-y-2">
+                                <label for="editNombre" class="font-headline font-bold text-sm text-primary uppercase tracking-wider">
+                                    Nombre(s) <span class="text-error" aria-hidden="true">*</span>
+                                </label>
+                                <input type="text" id="editNombre" name="nombre" required
+                                    class="w-full px-4 py-3 bg-surface-container border border-outline-variant/30 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+                                    placeholder="Ej: María" autocomplete="given-name" />
+                            </div>
+                            <div class="space-y-2">
+                                <label for="editApellidoP" class="font-headline font-bold text-sm text-primary uppercase tracking-wider">
+                                    Apellido Paterno <span class="text-error" aria-hidden="true">*</span>
+                                </label>
+                                <input type="text" id="editApellidoP" name="apellidoP" required
+                                    class="w-full px-4 py-3 bg-surface-container border border-outline-variant/30 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+                                    placeholder="Ej: García" autocomplete="family-name" />
+                            </div>
+                            <div class="space-y-2">
+                                <label for="editApellidoM" class="font-headline font-bold text-sm text-primary uppercase tracking-wider">
+                                    Apellido Materno
+                                </label>
+                                <input type="text" id="editApellidoM" name="apellidoM"
+                                    class="w-full px-4 py-3 bg-surface-container border border-outline-variant/30 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+                                    placeholder="Ej: López" />
+                            </div>
                         </div>
 
-                        <div class="space-y-2">
-                            <label for="editCargo" class="font-headline font-bold text-sm text-primary uppercase tracking-wider">
-                                Cargo <span class="text-error" aria-hidden="true">*</span>
-                            </label>
-                            <select id="editCargo" name="adm" required
-                                class="w-full px-4 py-3 bg-surface-container border border-outline-variant/30 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent">
-                                <option value="">Seleccione un cargo...</option>
-                                <option value="1">Administrador</option>
-                                <option value="0">Inspector</option>
-                            </select>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div class="space-y-2">
+                                <label for="editCargo" class="font-headline font-bold text-sm text-primary uppercase tracking-wider">
+                                    Cargo / Nivel de Acceso <span class="text-error" aria-hidden="true">*</span>
+                                </label>
+                                <select id="editCargo" name="adm" required
+                                    class="w-full px-4 py-3 bg-surface-container border border-outline-variant/30 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent">
+                                    <option value="">Seleccione un cargo...</option>
+                                    <option value="1">Administrador (Total)</option>
+                                    <option value="0">Inspector / Usuario</option>
+                                </select>
+                            </div>
+
+                            <div class="space-y-2">
+                                <label for="editRol" class="font-headline font-bold text-sm text-primary uppercase tracking-wider">
+                                    Rol en el Sistema <span class="text-error" aria-hidden="true">*</span>
+                                </label>
+                                <select id="editRol" name="id_rol" required
+                                    class="w-full px-4 py-3 bg-surface-container border border-outline-variant/30 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent">
+                                    <option value="">Seleccione un rol...</option>
+                                    <?php if (!empty($roles)): ?>
+                                        <?php foreach($roles as $rolItem): ?>
+                                            <option value="<?= esc($rolItem['id_rol']) ?>"><?= esc($rolItem['nombre']) ?></option>
+                                        <?php endforeach; ?>
+                                    <?php endif; ?>
+                                </select>
+                            </div>
                         </div>
 
                         <div class="space-y-2">

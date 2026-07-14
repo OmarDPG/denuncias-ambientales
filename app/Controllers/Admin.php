@@ -325,10 +325,12 @@ class Admin extends BaseController
         }
 
         $usuarios = $this->administrador->findAll();
+        $roles = $this->rolesModel->findAll();
 
         $data = [
             'currentPage'   => 'usuarios',
             'usuarios'      => $usuarios,
+            'roles'         => $roles,
             'totalUsuarios' => count($usuarios),
         ];
 
@@ -512,12 +514,15 @@ class Admin extends BaseController
         }
 
         $rules = [
-            'nombre'           => 'required|min_length[3]|max_length[100]',
+            'nombre'           => 'required|min_length[2]|max_length[100]',
+            'apellidoP'        => 'required|min_length[2]|max_length[100]',
+            'apellidoM'        => 'permit_empty|max_length[100]',
             'email'            => 'required|valid_email|is_unique[admin.email]',
             'expediente'       => 'required|exact_length[18]|alpha_numeric',
             'password'         => 'required|min_length[8]',
             'password_confirm' => 'required|matches[password]',
-            'adm'              => 'required|in_list[0,1]'
+            'adm'              => 'required|in_list[0,1]',
+            'id_rol'           => 'required|numeric'
         ];
 
         if (!$this->validate($rules)) {
@@ -525,18 +530,16 @@ class Admin extends BaseController
                 ->setJSON(['error' => 'Datos inválidos', 'validation' => $this->validator->getErrors()]);
         }
 
-        $nombre = $this->request->getPost('nombre');
-        $partes = explode(' ', trim($nombre), 3);
-
         $datos = [
             'email'      => $this->request->getPost('email'),
-            'usuario'    => explode('@', $this->request->getPost('email'))[0],
+            'usuario'    => explode('@', $this->request->getPost('email'))[0] . rand(100, 999),
             'password'   => password_hash($this->request->getPost('password'), PASSWORD_DEFAULT),
-            'nombre'     => $partes[0] ?? '',
-            'apellidoP'  => $partes[1] ?? '',
-            'apellidoM'  => $partes[2] ?? '',
+            'nombre'     => trim($this->request->getPost('nombre')),
+            'apellidoP'  => trim($this->request->getPost('apellidoP')),
+            'apellidoM'  => trim($this->request->getPost('apellidoM')),
             'expediente' => strtoupper($this->request->getPost('expediente')),
             'adm'        => (int) $this->request->getPost('adm'),
+            'id_rol'     => (int) $this->request->getPost('id_rol'),
             'activo'     => 1,
             'fecha_alta' => date('Y-m-d H:i:s')
         ];
@@ -597,10 +600,13 @@ class Admin extends BaseController
         }
 
         $rules = [
-            'nombre'     => 'required|min_length[3]|max_length[100]',
+            'nombre'     => 'required|min_length[2]|max_length[100]',
+            'apellidoP'  => 'required|min_length[2]|max_length[100]',
+            'apellidoM'  => 'permit_empty|max_length[100]',
             'email'      => "required|valid_email|is_unique[admin.email,id_adm,{$id}]",
             'expediente' => 'required|exact_length[18]|alpha_numeric',
-            'adm'        => 'required|in_list[0,1]'
+            'adm'        => 'required|in_list[0,1]',
+            'id_rol'     => 'required|numeric'
         ];
 
         if (!$this->validate($rules)) {
@@ -608,17 +614,15 @@ class Admin extends BaseController
                 ->setJSON(['error' => 'Datos inválidos', 'validation' => $this->validator->getErrors()]);
         }
 
-        $nombre = $this->request->getPost('nombre');
-        $partes = explode(' ', trim($nombre), 3);
-
         $datos = [
             'email'      => $this->request->getPost('email'),
             'usuario'    => explode('@', $this->request->getPost('email'))[0],
-            'nombre'     => $partes[0] ?? '',
-            'apellidoP'  => $partes[1] ?? '',
-            'apellidoM'  => $partes[2] ?? '',
+            'nombre'     => trim($this->request->getPost('nombre')),
+            'apellidoP'  => trim($this->request->getPost('apellidoP')),
+            'apellidoM'  => trim($this->request->getPost('apellidoM')),
             'expediente' => strtoupper($this->request->getPost('expediente')),
-            'adm'        => (int) $this->request->getPost('adm')
+            'adm'        => (int) $this->request->getPost('adm'),
+            'id_rol'     => (int) $this->request->getPost('id_rol')
         ];
 
         if ($this->administrador->update($id, $datos)) {

@@ -25,8 +25,11 @@ function saveAddUser() {
     }
 
     // Obtener valores
-    const nombre = document.getElementById('addNombreCompleto').value.trim();
+    const nombre = document.getElementById('addNombre').value.trim();
+    const apellidoP = document.getElementById('addApellidoP').value.trim();
+    const apellidoM = document.getElementById('addApellidoM').value.trim();
     const cargo = document.getElementById('addCargo').value;
+    const rol = document.getElementById('addRol').value;
     const curp = document.getElementById('addCurp').value.trim().toUpperCase();
     const email = document.getElementById('addEmail').value.trim();
     const password = document.getElementById('addPassword').value;
@@ -54,7 +57,10 @@ function saveAddUser() {
     const formData = new FormData();
     formData.append(CSRF_TOKEN_NAME, CSRF_HASH);
     formData.append('nombre', nombre);
+    formData.append('apellidoP', apellidoP);
+    formData.append('apellidoM', apellidoM);
     formData.append('adm', cargo);
+    formData.append('id_rol', rol);
     formData.append('expediente', curp);
     formData.append('email', email);
     formData.append('password', password);
@@ -94,8 +100,11 @@ function openEditUserModal(userId) {
             
             // Llenar formulario con datos actuales
             document.getElementById('editUserId').value = userId;
-            document.getElementById('editNombreCompleto').value = `${user.nombre} ${user.apellidoP} ${user.apellidoM || ''}`.trim();
+            document.getElementById('editNombre').value = user.nombre;
+            document.getElementById('editApellidoP').value = user.apellidoP;
+            document.getElementById('editApellidoM').value = user.apellidoM || '';
             document.getElementById('editCargo').value = user.adm;
+            document.getElementById('editRol').value = user.id_rol;
             document.getElementById('editCurp').value = user.expediente;
             document.getElementById('editEmail').value = user.email;
             document.getElementById('editUserSubtitle').textContent = `Editando: ${user.nombre} ${user.apellidoP}`;
@@ -127,8 +136,11 @@ function saveEditUser() {
     }
 
     const userId = currentEditingUserId;
-    const nombre = document.getElementById('editNombreCompleto').value.trim();
+    const nombre = document.getElementById('editNombre').value.trim();
+    const apellidoP = document.getElementById('editApellidoP').value.trim();
+    const apellidoM = document.getElementById('editApellidoM').value.trim();
     const cargo = document.getElementById('editCargo').value;
+    const rol = document.getElementById('editRol').value;
     const curp = document.getElementById('editCurp').value.trim().toUpperCase();
     const email = document.getElementById('editEmail').value.trim();
 
@@ -144,7 +156,10 @@ function saveEditUser() {
     formData.append(CSRF_TOKEN_NAME, CSRF_HASH);
     formData.append('id_adm', userId);
     formData.append('nombre', nombre);
+    formData.append('apellidoP', apellidoP);
+    formData.append('apellidoM', apellidoM);
     formData.append('adm', cargo);
+    formData.append('id_rol', rol);
     formData.append('expediente', curp);
     formData.append('email', email);
 
